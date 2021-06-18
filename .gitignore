@@ -1,0 +1,12 @@
+dataset
+weights
+.ipynb_checkpoints
+records/
+__pycache__
+*.py[cod]
+*$py.class
+*.swp
+*.log
+.idea/*
+.vscode
+*.tfrec
