@@ -103,7 +103,7 @@ if __name__ == "__main__":
         os.mkdir(log_dir)
 
     # model callback config
-    checkpoint_path = os.path.join(log_dir, 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
+    checkpoint_path = os.path.join(log_dir, f'pred_type-{PREDICTION_TARGET}'+'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
     cp_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path, save_weights_only=True, verbose=1)
 
