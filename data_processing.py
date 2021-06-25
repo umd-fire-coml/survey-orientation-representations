@@ -98,7 +98,7 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 
 # get the bounding box,  values for the instance
 # this automatically does flips
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str):
+def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, is_testing=False):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
@@ -115,8 +115,8 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
     # Get the dimensions offset from average (basically zero centering the values)
     obj['dims_mean_offset'] = obj['dims'] - class_dims_means[obj['class_name']]
  
-    # flip the image by random chance
-    flip = random() < 0.5
+    # flip the image by random chance, do not flip if testing
+    flip = (random() < 0.5) and (not is_testing) 
 
     # flip image horizontally
     if flip:
@@ -257,7 +257,7 @@ class KittiGenerator(Sequence):
 
         # insert data
         for i, obj_id in enumerate(self.obj_ids[l_bound:r_bound]):
-            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target)
+            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, is_testing=(self.mode=='test'))
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:
