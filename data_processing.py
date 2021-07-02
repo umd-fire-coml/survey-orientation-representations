@@ -254,7 +254,6 @@ class KittiGenerator(Sequence):
 
         # prepare kitti line output for visualization
         line_batch = []
-
         # insert data
         for i, obj_id in enumerate(self.obj_ids[l_bound:r_bound]):
             img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, is_testing=(self.mode=='test'))
@@ -278,10 +277,13 @@ class KittiGenerator(Sequence):
         
         if self.get_kitti_line:
             y_batch['line_batch'] = line_batch
-
+            
+        
         return img_batch, y_batch
 
     def on_epoch_end(self):
+        if self.mode=='test':
+            return
         np.random.shuffle(self.obj_ids)
 
     def __str__(self):
