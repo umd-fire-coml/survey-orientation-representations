@@ -65,8 +65,18 @@ for c,imgid in enumerate(sygyzy):
         work['imgid'] = imgid
         work['line'] = instance
         tokens = instance.strip().split(' ')
-        work['gt_alpha'] = tokens[3]
-        work['gt_rot_y'] = tokens[14]
+        work['gt_alpha'] = float(tokens[3])
+        work['gt_rot_y'] = float(tokens[14])
+        work['class']=tokens[0]
+        height = float(tokens[7])-float(tokens[5])
+        occlusion = int(tokens[2])
+        truncation = float(tokens[1])
+        if (height>40 and occlusion<=0 and truncation<.15):
+            work['difficulty'] = 'easy'
+        elif (height>25 and occlusion<=1 and truncation<.3):
+            work['difficulty'] = 'moderate'
+        elif (height>25 and occlusion<=2 and truncation<.5):
+            work['difficulty'] = 'hard'
         base.append(work)
 df = pd.DataFrame(base)
 df.to_csv("preds/out.csv")
