@@ -200,7 +200,7 @@ class KittiGenerator(Sequence):
                  get_kitti_line: bool = False,
                  batch_size: int = 8,
                  orientation_type: str = "multibin",
-                 val_split: float = 0.0,
+                 val_split: float = 0.2,
                  prediction_target: str = 'rot_y',
                  all_objs = None):
         self.label_dir = label_dir
@@ -220,7 +220,7 @@ class KittiGenerator(Sequence):
             cutoff = int(val_split * len(self.all_objs))  
             if self.mode == "train":
                 self.obj_ids = self.obj_ids[cutoff:]
-            elif self.mode == "val":
+            elif self.mode == "val" or self.mode == "test":
                 self.obj_ids = self.obj_ids[:cutoff] # reduce range for testing
             else:
                 raise Exception("invalid mode")

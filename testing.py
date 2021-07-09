@@ -51,7 +51,7 @@ parser.add_argument(dest='orientation', type=str,
                     help='Orientation Type of the model. Options are tricosine, alpha, rot_y, multibin')
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=8,
                     help='Define the batch size for training. Default value is 8')
-parser.add_argument('--weight_dir', dest='weight_dir', type=str, default='weights',
+parser.add_argument('--weight_path', dest='weight_path', type=str, default='weights',
                     help='Relative path to save weights. Default path is weights')
 parser.add_argument('--kitti_dir', dest='kitti_dir', type=str, default='dataset',
                     help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. Default path is dataset/')
@@ -59,6 +59,7 @@ parser.add_argument('--workers', dest='workers', type=int, default=2,
                     help='amount of worker threads to throw at dataprocessing (more should be better)')
 parser.add_argument('--output-dir',dest='output_dir',type= str,default='preds',
                    help='Relative path to store the predictions')
+args = parser.parse_args()
         
 #helper
 
@@ -76,10 +77,11 @@ def loss_func(orientation):
         
 
 if __name__ == "__main__":
+    
     BATCH_SIZE = args.batch_size
     ORIENTATION = args.orientation
     KITTI_DIR = args.kitti_dir
-    WEIGHT = args.weights
+    WEIGHT = args.weight_path
     WORKERS = args.workers
     OUTPUT_DIR = args.output_dir
     if not os.path.isdir(KITTI_DIR):
@@ -106,18 +108,20 @@ if __name__ == "__main__":
     loss_func, loss_weights = get_loss_params(ORIENTATION)
     model.compile(loss=loss_func, optimizer='adam',
                   metrics=[OrientationAccuracy(ORIENTATION)], run_eagerly=True)
-    weight_dir = os.path.join(WEIGHT,ORIENTATION)
-    wname = os.listdir(weight_dir)[0]
-    model.load_weights(os.path.join(weight_dir,wname))
+    model.load_weights(WEIGHT)
     start_time = time.time()
 
-    predictions = model.predict(x=test_gen,verbose=1,workers=6,use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
-    sygyzy=[]
-
-    for c,pred in enumerate(predictions):
-        sygyzy.append({'pred':pred,'line':test_gen.all_objs[c]['line'],'img':test_gen.all_objs[c]['image_file'][0:6]})
+    # Not optimized, puts all predictions in one giant numpy table
+    predictions = model.predict(x=test_gen, verbose=1, workers=WORKERS, use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
     
-    with open(os.path.join("preds",ORIENTATION+"_normed.json"), "w") as fp:
-        json.dump(sygyzy,fp,cls = NumpyEncoder)
+    file_output = []
+
+    for i, pred in enumerate(predictions):
+        file_output.append({'pred':pred, # pred outputs in orientation type
+                       'line':test_gen.all_objs[i]['line'], # kitti line
+                       'img_id':test_gen.all_objs[i]['image_file'][0:6]})
+    
+    with open(os.path.join("preds", ORIENTATION+".json"), "w") as fp:
+        json.dump(file_output, fp, cls=NumpyEncoder)
     
     
