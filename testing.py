@@ -49,18 +49,23 @@ if gpus:
 parser = argparse.ArgumentParser(description='Testing Model')
 parser.add_argument(dest='orientation', type=str,
                     help='Orientation Type of the model. Options are tricosine, alpha, rot_y, multibin')
+
+parser.add_argument('weight_path', type=str, help='Relative path to save weights. Default path is weights')
+
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=8,
                     help='Define the batch size for training. Default value is 8')
-parser.add_argument('--weight_path', dest='weight_path', type=str, default='weights',
-                    help='Relative path to save weights. Default path is weights')
+
+
 parser.add_argument('--kitti_dir', dest='kitti_dir', type=str, default='dataset',
                     help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. Default path is dataset/')
+
 parser.add_argument('--workers', dest='workers', type=int, default=2,
                     help='amount of worker threads to throw at dataprocessing (more should be better)')
+
 parser.add_argument('--output-dir',dest='output_dir',type= str,default='preds',
                    help='Relative path to store the predictions')
-args = parser.parse_args()
-        
+
+args = parser.parse_args()        
 #helper
 
 def loss_func(orientation):
@@ -77,7 +82,6 @@ def loss_func(orientation):
         
 
 if __name__ == "__main__":
-    
     BATCH_SIZE = args.batch_size
     ORIENTATION = args.orientation
     KITTI_DIR = args.kitti_dir
@@ -111,16 +115,13 @@ if __name__ == "__main__":
     model.load_weights(WEIGHT)
     start_time = time.time()
 
-    # Not optimized, puts all predictions in one giant numpy table
-    predictions = model.predict(x=test_gen, verbose=1, workers=WORKERS, use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
-    
+    predictions = model.predict(x=test_gen,verbose=1,workers=6,use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
     file_output = []
 
     for i, pred in enumerate(predictions):
         file_output.append({'pred':pred, # pred outputs in orientation type
                        'line':test_gen.all_objs[i]['line'], # kitti line
                        'img_id':test_gen.all_objs[i]['image_file'][0:6]})
-    
     with open(os.path.join("preds", ORIENTATION+".json"), "w") as fp:
         json.dump(file_output, fp, cls=NumpyEncoder)
     
