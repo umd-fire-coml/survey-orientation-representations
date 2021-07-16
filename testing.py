@@ -1,4 +1,6 @@
+'''Run this file to get all predictions in a json file, outputs to default directory ./preds/'''
 # XD the length of import idk i just threw all of these together
+
 import tensorflow as tf
 from backbone_xception import Xception_model
 from add_output_layers import add_output_layers
