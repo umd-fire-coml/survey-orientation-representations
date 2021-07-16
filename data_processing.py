@@ -10,6 +10,7 @@ from os.path import join
 from tensorflow.keras.utils import Sequence
 from tqdm import tqdm
 from random import random
+from positional_encoder import get_2d_pos_enc
 from orientation_converters import (radians_to_angle_normed, radians_to_multibin, radians_to_single_bin, radians_to_tricosine, radians_to_voting_bin,
 SHAPE_ALPHA_ROT_Y, SHAPE_MULTIBIN, SHAPE_SINGLE_BIN, SHAPE_TRICOSINE, SHAPE_VOTING_BIN)
 from add_output_layers import LAYER_OUTPUT_NAME_MULTIBIN, LAYER_OUTPUT_NAME_TRICOSINE, LAYER_OUTPUT_NAME_ALPHA_ROT_Y, LAYER_OUTPUT_NAME_VOTING_BIN, LAYER_OUTPUT_NAME_SINGLE_BIN
@@ -98,7 +99,8 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 
 # get the bounding box,  values for the instance
 # this automatically does flips
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str):
+# per image
+def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
@@ -121,6 +123,11 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
     # flip image horizontally
     if flip:
         img = np.fliplr(img)
+
+        # add positional encoding
+        if cat_pos_enc:
+            img = cat_pos_enc_to_img(img)
+
         if orientation_type == 'multibin':
             if 'multibin_orientation_flipped' not in obj:
                 # Get orientation and confidence values for flip
@@ -152,6 +159,10 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
     else:
+
+        if cat_pos_enc:
+            img = cat_pos_enc_to_img(img)
+
         if orientation_type == 'multibin':
             if 'multibin_orientation' not in obj:
                 # Get orientation and confidence values for flip
@@ -183,6 +194,11 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
 
+def cat_pos_enc_to_img(img):
+    img_shape = img.shape
+    pos_enc = get_2d_pos_enc(*img_shape)
+    return np.concatenate((img, pos_enc), axis=-1)
+
 class KittiGenerator(Sequence):
     '''Creates A KittiGenerator Sequence
     Args:
@@ -202,7 +218,8 @@ class KittiGenerator(Sequence):
                  orientation_type: str = "multibin",
                  val_split: float = 0.0,
                  prediction_target: str = 'rot_y',
-                 all_objs = None):
+                 all_objs = None,
+                 add_pos_enc: bool = False):
         self.label_dir = label_dir
         self.image_dir = image_dir
         if all_objs == None:
@@ -257,7 +274,7 @@ class KittiGenerator(Sequence):
 
         # insert data
         for i, obj_id in enumerate(self.obj_ids[l_bound:r_bound]):
-            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target)
+            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, self.add_pos_enc)
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:

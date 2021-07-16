@@ -45,10 +45,12 @@ parser.add_argument('--epoch', dest='num_epoch', type=int, default=100,
                     help='Number of epoch used for training. Default value is 100')
 parser.add_argument('--kitti_dir', dest='kitti_dir', type=str, default='dataset',
                     help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. Default path is dataset/')
+parser.add_argument('--log_dir', dest='log_dir', type=str, default='logs',
+                    help='path to tensorboard logs directory. Default path is logs/')            
 parser.add_argument('--val_split', dest='val_split', type=float, default=0.2,
                     help='Fraction of the dataset used for validation. Default val_split is 0.2')
 parser.add_argument('--resume', dest = 'resume', type=bool, default=False)
-
+parser.add_argument('--add_pos_enc', dest = 'add_pos_enc', type=bool, default=False)
 args = parser.parse_args()
 
 
@@ -63,9 +65,11 @@ if __name__ == "__main__":
     ORIENTATION = args.orientation
     KITTI_DIR = args.kitti_dir
     WEIGHT_DIR = args.weight_dir
+    LOG_DIR = args.log_dir
     VAL_SPLIT = args.val_split
     PREDICTION_TARGET = args.predict
     RESUME = args.resume
+    ADD_POS_ENC = args.add_pos_enc
     if not os.path.isdir(KITTI_DIR):
         raise Exception('kitti_dir is not a directory.')
     if ORIENTATION not in ['tricosine', 'alpha', 'rot_y', 'multibin', 'voting_bin', 'single_bin']:
@@ -80,10 +84,12 @@ if __name__ == "__main__":
 
     # Generator config
     train_gen = dp.KittiGenerator(label_dir=LABEL_DIR, image_dir=IMG_DIR, batch_size=BATCH_SIZE,
-                                  orientation_type=ORIENTATION, mode='train', val_split=VAL_SPLIT, prediction_target=PREDICTION_TARGET)
+                                  orientation_type=ORIENTATION, mode='train', val_split=VAL_SPLIT, prediction_target=PREDICTION_TARGET,
+                                  add_pos_enc=ADD_POS_ENC)
     val_gen = dp.KittiGenerator(label_dir=LABEL_DIR, image_dir=IMG_DIR, batch_size=BATCH_SIZE,
                                    orientation_type=ORIENTATION, mode='val', val_split=VAL_SPLIT,
-                                   all_objs=train_gen.all_objs, prediction_target=PREDICTION_TARGET)
+                                   all_objs=train_gen.all_objs, prediction_target=PREDICTION_TARGET,
+                                   add_pos_enc=ADD_POS_ENC)
     print('Training on {:n} objects. Validating on {:n} objects.'.format(len(train_gen.obj_ids), len(val_gen.obj_ids)))
 
     # Building Model
@@ -96,14 +102,23 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time))
+
+    pos_enc_stamp = "_with_pos_enc" if ADD_POS_ENC else ""
+
+    training_stamp = ORIENTATION + pos_enc_stamp
+
+    training_stamp_with_timestamp = training_stamp + '_' + timestamp
+
 
     # log directory for weights, history, tensorboard
-    log_dir = os.path.join(WEIGHT_DIR, ORIENTATION + '_' + datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time)))
+    log_dir = os.path.join(LOG_DIR, training_stamp_with_timestamp)
     if not os.path.isdir(log_dir):
         os.mkdir(log_dir)
 
     # model callback config
-    checkpoint_path = os.path.join(log_dir, f'pred_type-{PREDICTION_TARGET}'+'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
+    checkpoint_dir = os.path.join(WEIGHT_DIR, training_stamp_with_timestamp)
+    checkpoint_path = os.path.join(checkpoint_dir, f'pred_type-{training_stamp}'+'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
     cp_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path, save_weights_only=True, verbose=1)
 
