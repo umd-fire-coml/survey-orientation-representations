@@ -125,7 +125,7 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
         img = np.fliplr(img)
 
         # add positional encoding
-        if cat_pos_enc:
+        if add_pos_enc:
             img = cat_pos_enc_to_img(img)
 
         if orientation_type == 'multibin':
@@ -160,7 +160,7 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
     else:
 
-        if cat_pos_enc:
+        if add_pos_enc:
             img = cat_pos_enc_to_img(img)
 
         if orientation_type == 'multibin':
@@ -232,6 +232,7 @@ class KittiGenerator(Sequence):
         self.orientation_type = orientation_type
         self.prediction_target = prediction_target
         self.obj_ids = list(range(len(self.all_objs)))  # list of all object indexes for the generator
+        self.add_pos_enc = add_pos_enc
         if val_split > 0.0:
             assert mode != 'all' and val_split < 1.0
             cutoff = int(val_split * len(self.all_objs))  
@@ -253,7 +254,8 @@ class KittiGenerator(Sequence):
         num_batch_objs = r_bound - l_bound
 
         # prepare batch of images
-        img_batch = np.empty((num_batch_objs, NORM_H, NORM_W, 3))
+        n_channel = 6 if self.add_pos_enc else 3
+        img_batch = np.empty((num_batch_objs, NORM_H, NORM_W, n_channel))
 
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":

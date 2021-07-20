@@ -7,6 +7,7 @@ import os
 import argparse
 import time
 from datetime import datetime
+import pathlib
 
 import tensorflow as tf
 
@@ -45,8 +46,8 @@ parser.add_argument('--epoch', dest='num_epoch', type=int, default=100,
                     help='Number of epoch used for training. Default value is 100')
 parser.add_argument('--kitti_dir', dest='kitti_dir', type=str, default='dataset',
                     help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. Default path is dataset/')
-parser.add_argument('--log_dir', dest='log_dir', type=str, default='logs',
-                    help='path to tensorboard logs directory. Default path is logs/')            
+parser.add_argument('--log_dir', dest='log_dir', type=str,
+                    help='path to tensorboard logs directory. Default path is weights/logs/')
 parser.add_argument('--val_split', dest='val_split', type=float, default=0.2,
                     help='Fraction of the dataset used for validation. Default val_split is 0.2')
 parser.add_argument('--resume', dest = 'resume', type=bool, default=False)
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     PREDICTION_TARGET = args.predict
     RESUME = args.resume
     ADD_POS_ENC = args.add_pos_enc
+
     if not os.path.isdir(KITTI_DIR):
         raise Exception('kitti_dir is not a directory.')
     if ORIENTATION not in ['tricosine', 'alpha', 'rot_y', 'multibin', 'voting_bin', 'single_bin']:
@@ -79,6 +81,18 @@ if __name__ == "__main__":
     if not os.path.isdir(WEIGHT_DIR):
         os.mkdir(WEIGHT_DIR)
 
+    # get training starting time and construct stamps
+    start_time = time.time()
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time))
+    pos_enc_stamp = "_with_pos_enc" if ADD_POS_ENC else ""
+    training_stamp = ORIENTATION + pos_enc_stamp
+    training_stamp_with_timestamp = training_stamp + '_' + timestamp
+    print(f'training stamp ={training_stamp}\ntraining stamp with timestamp ={training_stamp_with_timestamp}')
+    # log directory for weights, history, tensorboard
+    log_dir = os.path.join(LOG_DIR,"logs", training_stamp_with_timestamp) \
+        if LOG_DIR else os.path.join(WEIGHT_DIR, "logs", training_stamp_with_timestamp)
+    if not os.path.isdir(log_dir):
+        pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
     LABEL_DIR = os.path.join(KITTI_DIR, 'training/label_2/')
     IMG_DIR = os.path.join(KITTI_DIR, 'training/image_2/')
 
@@ -93,28 +107,12 @@ if __name__ == "__main__":
     print('Training on {:n} objects. Validating on {:n} objects.'.format(len(train_gen.obj_ids), len(val_gen.obj_ids)))
 
     # Building Model
-    model = build_model(ORIENTATION)
+    model = build_model(ORIENTATION, ADD_POS_ENC)
 
     loss_func, loss_weights = get_loss_params(ORIENTATION)
 
     model.compile(loss=loss_func, loss_weights=loss_weights, optimizer='adam',
                   metrics=OrientationAccuracy(ORIENTATION), run_eagerly=True)
-
-    start_time = time.time()
-
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time))
-
-    pos_enc_stamp = "_with_pos_enc" if ADD_POS_ENC else ""
-
-    training_stamp = ORIENTATION + pos_enc_stamp
-
-    training_stamp_with_timestamp = training_stamp + '_' + timestamp
-
-
-    # log directory for weights, history, tensorboard
-    log_dir = os.path.join(LOG_DIR, training_stamp_with_timestamp)
-    if not os.path.isdir(log_dir):
-        os.mkdir(log_dir)
 
     # model callback config
     checkpoint_dir = os.path.join(WEIGHT_DIR, training_stamp_with_timestamp)

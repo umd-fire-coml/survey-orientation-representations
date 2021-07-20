@@ -20,4 +20,5 @@ def get_2d_pos_enc(height, width, n_channels):
     pe[1:d_model:2, :, :] = np.expand_dims(np.repeat(np.cos(pos_w * div_term).T, height, axis=0), axis=0)
     pe[d_model::2, :, :] = np.expand_dims(np.repeat(np.sin(pos_h * div_term), width, axis=1), axis=0)
     pe[d_model + 1::2, :, :] = np.expand_dims(np.repeat(np.cos(pos_h * div_term), width, axis=1), axis=0)
+    pe = np.moveaxis(pe, 0, -1)
     return pe
