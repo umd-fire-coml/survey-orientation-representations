@@ -95,6 +95,17 @@ if __name__ == "__main__":
         pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
         checkpoint_dir = os.path.join(WEIGHT_DIR, training_stamp_with_timestamp)
         pathlib.Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+
+        # model callback config
+        checkpoint_path = os.path.join(checkpoint_dir,
+                                       f'pred_type-{PREDICTION_TARGET}' + 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=checkpoint_path, save_weights_only=True, verbose=1)
+        # tensorboard logs path
+        tb_log_dir = os.path.join(log_dir, "logs/scalars/")
+        tb_callback = tf.keras.callbacks.TensorBoard(
+            log_dir=tb_log_dir, histogram_freq=1)
+
     LABEL_DIR = os.path.join(KITTI_DIR, 'training/label_2/')
     IMG_DIR = os.path.join(KITTI_DIR, 'training/image_2/')
 
@@ -116,16 +127,6 @@ if __name__ == "__main__":
     model.compile(loss=loss_func, loss_weights=loss_weights, optimizer='adam',
                   metrics=OrientationAccuracy(ORIENTATION), run_eagerly=True)
 
-    # model callback config
-    checkpoint_path = os.path.join(checkpoint_dir,
-                                   f'pred_type-{PREDICTION_TARGET}' + 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=checkpoint_path, save_weights_only=True, verbose=1)
-
-    # tensorboard logs path
-    tb_log_dir = os.path.join(log_dir, "logs/scalars/")
-    tb_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=tb_log_dir, histogram_freq=1)
 
     # early stop callback and accuracy callback
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
