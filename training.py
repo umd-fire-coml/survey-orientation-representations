@@ -89,10 +89,12 @@ if __name__ == "__main__":
     training_stamp_with_timestamp = training_stamp + '_' + timestamp
     print(f'training stamp ={training_stamp}\ntraining stamp with timestamp ={training_stamp_with_timestamp}')
     # log directory for weights, history, tensorboard
-    log_dir = os.path.join(LOG_DIR,"logs", training_stamp_with_timestamp) \
-        if LOG_DIR else os.path.join(WEIGHT_DIR, "logs", training_stamp_with_timestamp)
-    if not os.path.isdir(log_dir):
+    if not RESUME:
+        log_dir = os.path.join(LOG_DIR,"logs", training_stamp_with_timestamp) \
+            if LOG_DIR else os.path.join(WEIGHT_DIR, "logs", training_stamp_with_timestamp)
         pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
+        checkpoint_dir = os.path.join(WEIGHT_DIR, training_stamp_with_timestamp)
+        pathlib.Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
     LABEL_DIR = os.path.join(KITTI_DIR, 'training/label_2/')
     IMG_DIR = os.path.join(KITTI_DIR, 'training/image_2/')
 
@@ -115,8 +117,8 @@ if __name__ == "__main__":
                   metrics=OrientationAccuracy(ORIENTATION), run_eagerly=True)
 
     # model callback config
-    checkpoint_dir = os.path.join(WEIGHT_DIR, training_stamp_with_timestamp)
-    checkpoint_path = os.path.join(checkpoint_dir, f'pred_type-{training_stamp}'+'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
+    checkpoint_path = os.path.join(checkpoint_dir,
+                                   f'pred_type-{PREDICTION_TARGET}' + 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
     cp_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path, save_weights_only=True, verbose=1)
 
@@ -129,15 +131,27 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        old_log_file = "multibin_2021-03-18-00-39-50_1616027990"
-        stored_weights_dir = os.path.join(WEIGHT_DIR, old_log_file, "epoch-48-loss-1.7997-val_loss-1.8989.h5")
-        if not os.path.isfile(stored_weights_dir):
-            raise (stored_weights_dir + " is not a valid directory")
-        model.load_weights(stored_weights_dir)
+        old_time_stamp = "tricosine_with_pos_enc_2021-07-21-11-01-05_1626879665"
+        weights_file_name = "pred_type-alphaepoch-64-loss-0.0163-val_loss-0.1166.h5"
+        init_epoch = 64
+        print(f'resuming from {old_time_stamp}\\{weights_file_name}')
+        stored_weights_file = os.path.join(WEIGHT_DIR, old_time_stamp, weights_file_name)
+        if not os.path.isfile(stored_weights_file):
+            raise (f'stored weights directory "{stored_weights_file}" is not a valid file')
+        model.load_weights(stored_weights_file)
         # overwrite tensorboard callback
-        tb_callback = tb_callback = tf.keras.callbacks.TensorBoard(log_dir=os.path.join(old_log_file, "logs/scalars/"), histogram_freq=1)
+        tb_log_dir = os.path.join(WEIGHT_DIR, "logs", old_time_stamp, "logs/scalars/")
+        if not os.path.isdir(tb_log_dir):
+            raise (f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
+        tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
+        cp_callback_file = os.path.join(WEIGHT_DIR, old_time_stamp, weights_file_name)
+        if not os.path.isfile(cp_callback_file):
+            raise (f'tensorboard call back file "{cp_callback_file}" is not a valid file')
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=cp_callback_file, save_weights_only=True, verbose=1)
+
         train_history = model.fit(x=train_gen, epochs=NUM_EPOCH, verbose=1,
-                              validation_data=val_gen, callbacks=[tb_callback, cp_callback], initial_epoch=49)
+                              validation_data=val_gen, callbacks=[tb_callback, cp_callback], initial_epoch=init_epoch)
     else:
         train_history = model.fit(x=train_gen, epochs=NUM_EPOCH, verbose=1,
                               validation_data=val_gen, callbacks=[tb_callback, cp_callback])
