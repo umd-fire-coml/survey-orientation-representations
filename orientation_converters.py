@@ -266,6 +266,8 @@ def angle_normed_to_radians(angle_normed):
 
 def alpha_to_rot_y(alpha, loc_x, loc_z):
     return alpha + np.arctan(loc_x/loc_z)
+def rot_y_to_alpha(alpha, loc_x, loc_z):
+    return alpha - np.arctan(loc_x/loc_z)
 
 # single bin and voting bin constants
 SHAPE_SINGLE_BIN = (2,)

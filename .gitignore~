@@ -1,7 +1,6 @@
 dataset
 weights
 preds
-charts
 .ipynb_checkpoints
 records/
 __pycache__

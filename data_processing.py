@@ -100,7 +100,7 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 # get the bounding box,  values for the instance
 # this automatically does flips
 # per image
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool):
+def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool, is_testing:bool=False):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
@@ -117,8 +117,8 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
     # Get the dimensions offset from average (basically zero centering the values)
     obj['dims_mean_offset'] = obj['dims'] - class_dims_means[obj['class_name']]
  
-    # flip the image by random chance
-    flip = random() < 0.5
+    # flip the image by random chance, do not flip if testing
+    flip = (random() < 0.5) and (not is_testing) 
 
     # flip image horizontally
     if flip:
@@ -216,7 +216,7 @@ class KittiGenerator(Sequence):
                  get_kitti_line: bool = False,
                  batch_size: int = 8,
                  orientation_type: str = "multibin",
-                 val_split: float = 0.0,
+                 val_split: float = 0.2,
                  prediction_target: str = 'rot_y',
                  all_objs = None,
                  add_pos_enc: bool = False):
@@ -238,7 +238,7 @@ class KittiGenerator(Sequence):
             cutoff = int(val_split * len(self.all_objs))  
             if self.mode == "train":
                 self.obj_ids = self.obj_ids[cutoff:]
-            elif self.mode == "val":
+            elif self.mode == "val" or self.mode == "test":
                 self.obj_ids = self.obj_ids[:cutoff] # reduce range for testing
             else:
                 raise Exception("invalid mode")
@@ -273,10 +273,10 @@ class KittiGenerator(Sequence):
 
         # prepare kitti line output for visualization
         line_batch = []
-
         # insert data
         for i, obj_id in enumerate(self.obj_ids[l_bound:r_bound]):
-            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, self.add_pos_enc)
+            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, self.add_pos_enc,is_testing=(self.mode=='test'))
+
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:
@@ -297,10 +297,13 @@ class KittiGenerator(Sequence):
         
         if self.get_kitti_line:
             y_batch['line_batch'] = line_batch
-
+            
+        
         return img_batch, y_batch
 
     def on_epoch_end(self):
+        if self.mode=='test':
+            return
         np.random.shuffle(self.obj_ids)
 
     def __str__(self):
