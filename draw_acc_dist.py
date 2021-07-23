@@ -9,7 +9,10 @@ import math
 from matplotlib import pyplot
 import argparse
 import os
-
+from sklearn.metrics import precision_recall_curve,roc_auc_score
+import numpy as np
+import random
+from statistics import mean
 
 parser = argparse.ArgumentParser(description='Draw ROC Curve from predictions file')
 # update this to parse str list for comparison chart.
@@ -88,7 +91,7 @@ if __name__ == "__main__":
                     images[imgid][p['line']] ={}
                 images[imgid][p['line']]['voting_pred'] = p['pred']
                 images[imgid][p['line']]['conv_voting'] = conv_voting
-        elif orientation ='tricosine':
+        elif orientation =='tricosine':
             for p in o_preds:
                 conv_tri = conv.tricosine_to_radians(p['pred'])
                 imgid = p['img_id']
@@ -123,6 +126,51 @@ if __name__ == "__main__":
                 instance_dict['difficulty'] = 'hard'
             instances.append(instance_dict)
     df = pd.DataFrame(instances)
+    easy =  df.loc[(df['difficulty'] == 'easy')]
+    mod =  df.loc[(df['difficulty'] == 'moderate')]
+    hard =  df.loc[(df['difficulty'] == 'hard')]
+    for difficulty in ['easy','mod','hard']:
+        df = eval(difficulty)
+        if 'alpha' in ORIENTATIONS:
+            deltas = df['pred_alpha']-df['gt_alpha']
+            alpha_accuracy = 0.5 * (1.0 + np.cos(deltas))
+            num_preds = len(alpha_accuracy)
+            instance_num = [idx/num_preds for idx, acc in enumerate(alpha_accuracy)]
+            sorted_alpha = [acc for acc in reversed(sorted(alpha_accuracy))]
+            pyplot.plot(instance_num, sorted_alpha, marker='.', label='Alpha')
+            print("%s alpha overall is : %f "%(difficulty,mean(sorted_alpha)))
+        if 'rot_y' in ORIENTATIONS:
+            deltas = df['conv_roty']-df['gt_alpha']
+            roty_accuracy = (1+np.cos(deltas))/2
+            sorted_roty = [i for i in reversed(sorted(roty_accuracy ))]
+            pyplot.plot(instance_num, sorted_roty, marker='.', label='Rot_y')
+            print("%s rot_y overall is : %f"%(difficulty,mean(sorted_roty)))
+        if 'single_bin' in ORIENTATIONS:
+            deltas = df['conv_single']-df['gt_alpha']
+            single_accuracy = (1+np.cos(deltas))/2
+            sorted_single = [acc for acc in reversed(sorted(single_accuracy))]
+            pyplot.plot(instance_num, sorted_single, marker='.', label='Single')
+            print("%s single bin overall is : %f"%(difficulty,mean(sorted_single)))
+        if 'voting_bin' in ORIENTATIONS:
+            deltas = df['conv_voting']-df['gt_alpha']
+            voting_accuracy = (1+np.cos(deltas))/2
+            sorted_voting = [i for i in reversed(sorted(voting_accuracy))]
+            pyplot.plot(instance_num, sorted_voting, marker='.', label='Voting')
+            print("%s sorted bin overall is : %f"%(difficulty, mean(sorted_voting)))
+        if 'tricosine' in ORIENTATIONS:
+            deltas = df['conv_tricosine']-df['gt_alpha']
+            tri_accuracy = (1+np.cos(deltas))/2
+            sorted_tri = [i for i in reversed(sorted(tri_accuracy))]
+            pyplot.plot(instance_num, sorted_tri, marker='.', label='Tricosine')
+            print("%s tricosine overall is : %f"%(difficulty,mean(sorted_tri)))
+        pyplot.title('Difficulty: '+difficulty)
+        # axis labels
+        pyplot.xlabel('Instance')
+        pyplot.ylabel('Accuracy')
+        # show the legend
+        pyplot.legend()
+        # show the plot
+        pyplot.savefig(os.path.join(OUTPUT_DIR, difficulty+".png"))
     
     
     
