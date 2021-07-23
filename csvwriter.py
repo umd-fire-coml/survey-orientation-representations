@@ -8,26 +8,26 @@ import math
 yes its your job to make sure these exist
 '''
 
-with open("preds/alpha_normed.json","r+") as fp:
+with open("preds/alpha.json","r+") as fp:
     alpha_preds = json.load(fp,object_hook=json_numpy_obj_hook)
-with open("preds/rot_y_normed.json","r+") as fp:
+with open("preds/rot_y.json","r+") as fp:
     roty_preds = json.load(fp,object_hook=json_numpy_obj_hook)
-with open("preds/single_bin_normed.json","r+") as fp:
+with open("preds/single_bin.json","r+") as fp:
     single_preds = json.load(fp,object_hook=json_numpy_obj_hook)
-with open("preds/voting_bin_normed.json","r+") as fp:
+with open("preds/voting_bin.json","r+") as fp:
     voting_preds = json.load(fp,object_hook=json_numpy_obj_hook)
-with open("preds/tricosine_normed.json","r+") as fp:
+with open("preds/tricosine.json","r+") as fp:
     tricosine_preds = json.load(fp,object_hook=json_numpy_obj_hook)
 sygyzy={}
 for p in alpha_preds:
     pred_alpha = conv.angle_normed_to_radians(p['pred'][0])
-    imgid = p['img']
+    imgid = p['img_id']
     if (imgid not in sygyzy):
         sygyzy[imgid]={}
     sygyzy[imgid][p['line']] ={'norm_alpha':p['pred'][0],'pred_alpha':pred_alpha}
 for p in roty_preds:
     pred_roty = conv.angle_normed_to_radians(p['pred'][0])
-    imgid = p['img']
+    imgid = p['img_id']
     if (imgid not in sygyzy):
         raise
     sygyzy[imgid][p['line']]['norm_roty'] = p['pred'][0]
@@ -37,14 +37,14 @@ for p in roty_preds:
     
 for p in single_preds:
     conv_single = conv.single_bin_to_radians(p['pred'])
-    imgid = p['img']
+    imgid = p['img_id']
     if (imgid not in sygyzy):
         raise
     sygyzy[imgid][p['line']]['single_pred'] = p['pred']
     sygyzy[imgid][p['line']]['conv_single'] = conv_single
 for p in voting_preds:
     conv_voting = conv.voting_bin_to_radians(p['pred'])
-    imgid = p['img']
+    imgid = p['img_id']
     if (conv_voting>math.pi):
         conv_voting-=math.tau
     if (imgid not in sygyzy):
@@ -53,7 +53,7 @@ for p in voting_preds:
     sygyzy[imgid][p['line']]['conv_voting'] = conv_voting
 for c,p in enumerate(tricosine_preds):
     conv_tri = conv.tricosine_to_radians(p['pred'])
-    imgid = p['img']
+    imgid = p['img_id']
     if (imgid not in sygyzy):
         raise
     sygyzy[imgid][p['line']]['tricosine_pred'] = p['pred']
@@ -62,7 +62,7 @@ base = []
 for c,imgid in enumerate(sygyzy):
     for instance in sygyzy[imgid]:
         work = sygyzy[imgid][instance]
-        work['imgid'] = imgid
+        work['img_id'] = imgid
         work['line'] = instance
         tokens = instance.strip().split(' ')
         work['gt_alpha'] = float(tokens[3])
