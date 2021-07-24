@@ -96,7 +96,8 @@ if __name__ == "__main__":
     training_stamp_with_timestamp = training_stamp + '_' + timestamp
     print(f'training stamp ={training_stamp}\ntraining stamp with timestamp ={training_stamp_with_timestamp}')
     # format for .h5 weight file
-    weight_format = 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5'
+    # old weight_format = 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5'
+    weight_format = 'epoch-{epoch:02d}-train_acc-{orientation_accuracy:.4f}-val_loss-{val_loss:.4f}-train_loss-{loss:.4f}.h5'
     weights_directory = os.path.join(TRAINING_RECORD, 'weights') if not WEIGHT_DIR_ROOT else WEIGHT_DIR_ROOT
     logs_directory = os.path.join(TRAINING_RECORD, 'logs') if not LOG_DIR_ROOT else LOG_DIR_ROOT
     pathlib.Path(weights_directory).mkdir(parents=True, exist_ok=True)
@@ -109,7 +110,7 @@ if __name__ == "__main__":
         pathlib.Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
         # model callback config
-        checkpoint_file_name = os.path.join(checkpoint_dir,weight_format)
+        checkpoint_file_name = os.path.join(checkpoint_dir, weight_format)
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_file_name, save_weights_only=True, verbose=1)
         # tensorboard logs path
