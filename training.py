@@ -97,12 +97,12 @@ if __name__ == "__main__":
     print(f'training stamp ={training_stamp}\ntraining stamp with timestamp ={training_stamp_with_timestamp}')
     # format for .h5 weight file
     # old weight_format = 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5'
-    weight_format = 'epoch-{epoch:02d}-train_acc-{orientation_accuracy:.4f}-val_loss-{val_loss:.4f}-train_loss-{loss:.4f}.h5'
+    weight_format = 'epoch-{epoch:02d}-val_acc-{val_orientation_accuracy:.4f}-train_acc-{orientation_accuracy:.4f}-val_loss-{val_loss:.4f}-train_loss-{loss:.4f}.h5'
     weights_directory = os.path.join(TRAINING_RECORD, 'weights') if not WEIGHT_DIR_ROOT else WEIGHT_DIR_ROOT
     logs_directory = os.path.join(TRAINING_RECORD, 'logs') if not LOG_DIR_ROOT else LOG_DIR_ROOT
     pathlib.Path(weights_directory).mkdir(parents=True, exist_ok=True)
     pathlib.Path(logs_directory).mkdir(parents=True, exist_ok=True)
-
+    init_epoch = 1
     if not RESUME:
         log_dir = os.path.join(logs_directory, training_stamp_with_timestamp)
         pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
@@ -160,7 +160,7 @@ if __name__ == "__main__":
             filepath=cp_callback_file, save_weights_only=True, verbose=1)
 
     train_history = model.fit(x=train_gen, epochs=NUM_EPOCH, verbose=1,
-                              validation_data=val_gen, callbacks=[tb_callback, cp_callback])
+                              validation_data=val_gen, callbacks=[tb_callback, cp_callback], initial_epoch=init_epoch)
 
     print('Training Finished. Weights and history are saved under directory:', WEIGHT_DIR_ROOT)
     print('Total training time is', timer(start_time, time.time()))
