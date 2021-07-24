@@ -37,17 +37,22 @@ parser = argparse.ArgumentParser(description='Training Model')
 parser.add_argument('--predict', dest='predict', type=str, default="rot-y",
                     help='The target angle to be predicted. Options are rot-y, alpha')
 parser.add_argument('--converter', dest='orientation', type=str,
-                    help='Orientation conversion type of the model. Options are alpha, rot_y, tricosine, multibin, voting_bin, single_bin')
+                    help='Orientation conversion type of the model. '
+                         'Options are alpha, rot_y, tricosine, multibin, voting_bin, single_bin')
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=8,
                     help='Define the batch size for training. Default value is 8')
-parser.add_argument('--weight_dir', dest='weight_dir', type=str, default='weights',
-                    help='Relative path to save weights. Default path is weights')
 parser.add_argument('--epoch', dest='num_epoch', type=int, default=100,
                     help='Number of epoch used for training. Default value is 100')
 parser.add_argument('--kitti_dir', dest='kitti_dir', type=str, default='dataset',
-                    help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. Default path is dataset/')
-parser.add_argument('--log_dir', dest='log_dir', type=str,
-                    help='path to tensorboard logs directory. Default path is logs')
+                    help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. '
+                         'Default path is dataset/')
+parser.add_argument('--training_record', dest= 'training_record', type= str, default='training_record',
+                    help='root directory of all training record, parent of weights and logs directory. '
+                         'Default path is training_record')
+parser.add_argument('--log_dir', dest='log_dir', type=str, default = 'logs',
+                    help='path to tensorboard logs directory. Default path is training_record/logs')
+parser.add_argument('--weight_dir', dest='weight_dir', type=str, default='weights',
+                    help='Relative path to save weights. Default path is training_record/weights')
 parser.add_argument('--val_split', dest='val_split', type=float, default=0.2,
                     help='Fraction of the dataset used for validation. Default val_split is 0.2')
 parser.add_argument('--resume', dest = 'resume', type=bool, default=False)
@@ -71,6 +76,7 @@ if __name__ == "__main__":
     PREDICTION_TARGET = args.predict
     RESUME = args.resume
     ADD_POS_ENC = args.add_pos_enc
+    TRAINING_RECORD = args.training_record
 
     if not os.path.isdir(KITTI_DIR):
         raise Exception('kitti_dir is not a directory.')
@@ -88,7 +94,9 @@ if __name__ == "__main__":
     training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_{pos_enc_stamp}'
     training_stamp_with_timestamp = training_stamp + '_' + timestamp
     print(f'training stamp ={training_stamp}\ntraining stamp with timestamp ={training_stamp_with_timestamp}')
-    # log directory for weights, history, tensorboard
+    # format for .h5 weight file
+    weight_format = 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5'
+
     if not RESUME:
         log_dir = os.path.join(LOG_DIR_ROOT, training_stamp_with_timestamp)
         pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
@@ -96,10 +104,9 @@ if __name__ == "__main__":
         pathlib.Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
         # model callback config
-        checkpoint_path = os.path.join(checkpoint_dir,
-                                       'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5')
+        checkpoint_file_name = os.path.join(checkpoint_dir,weight_format)
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=checkpoint_path, save_weights_only=True, verbose=1)
+            filepath=checkpoint_file_name, save_weights_only=True, verbose=1)
         # tensorboard logs path
         tb_log_dir = os.path.join(log_dir, "logs/scalars/")
         tb_callback = tf.keras.callbacks.TensorBoard(
@@ -144,9 +151,8 @@ if __name__ == "__main__":
         if not os.path.isdir(tb_log_dir):
             raise (f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
-        cp_callback_file = os.path.join(WEIGHT_DIR_ROOT, old_time_stamp, weights_file_name)
-        if not os.path.isfile(cp_callback_file):
-            raise (f'tensorboard call back file "{cp_callback_file}" is not a valid file')
+        # overwrite call back directory
+        cp_callback_file = os.path.join(WEIGHT_DIR_ROOT, old_time_stamp, weight_format)
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=cp_callback_file, save_weights_only=True, verbose=1)
 
