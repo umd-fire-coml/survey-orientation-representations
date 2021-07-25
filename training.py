@@ -149,9 +149,8 @@ if __name__ == "__main__":
         print(f'The latest file is {latest_files} and its epoch number is {latest_epoch}')
         init_epoch = int(latest_epoch)
         if not init_epoch: raise Exception("Fail to match epoch number")
-        exit()
-        if not os.path.isfile(latest_epoch):raise FileNotFoundError(f'stored weights directory "{latest_epoch}" is not a valid file')
-        model.load_weights(latest_epoch)
+        if not os.path.isfile(latest_files):raise FileNotFoundError(f'stored weights directory "{latest_files}" is not a valid file')
+        model.load_weights(latest_files)
         # overwrite tensorboard callback
         tb_log_dir = os.path.join(logs_directory, old_time_stamp, "logs", "scalars")
         if not os.path.isdir(tb_log_dir):raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
