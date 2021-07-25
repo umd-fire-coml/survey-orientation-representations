@@ -50,13 +50,13 @@ loss_voting_bin_weights = {LAYER_OUTPUT_NAME_VOTING_BIN: 1.0}
 def get_loss_params(orientation):
     if orientation == 'tricosine':
         return loss_tricosine, loss_tricosine_weights
-    elif orientation == 'alpha' or orientation == 'rot_y':
+    elif orientation == 'alpha' or orientation == 'rot-y':
         return loss_alpha_rot_y, loss_alpha_rot_y_weights
     elif orientation == 'multibin':
         return loss_multibin, loss_multibin_weights
-    elif orientation == 'voting_bin':
+    elif orientation == 'voting-bin':
         return loss_voting_bin, loss_voting_bin_weights
-    elif orientation == 'single_bin':
+    elif orientation == 'single-bin':
         return loss_single_bin, loss_single_bin_weights
     else:
         raise Exception('Incorrect orientation type for loss function')

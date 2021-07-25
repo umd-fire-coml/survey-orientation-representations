@@ -24,11 +24,11 @@ def add_output_layers(orientation_type, backbone_layer):
         return add_dense_layers(backbone_layer, SHAPE_MULTIBIN, out_layer_name=LAYER_OUTPUT_NAME_MULTIBIN)
     elif orientation_type == 'tricosine':
         return add_dense_layers(backbone_layer, SHAPE_TRICOSINE, out_layer_name=LAYER_OUTPUT_NAME_TRICOSINE)
-    elif orientation_type == 'alpha' or orientation_type == 'rot_y': 
+    elif orientation_type == 'alpha' or orientation_type == 'rot-y':
         return add_dense_layers(backbone_layer, SHAPE_ALPHA_ROT_Y, out_layer_name=LAYER_OUTPUT_NAME_ALPHA_ROT_Y)
-    if orientation_type == 'voting_bin':
+    if orientation_type == 'voting-bin':
         return add_dense_layers(backbone_layer, SHAPE_VOTING_BIN, out_layer_name=LAYER_OUTPUT_NAME_VOTING_BIN)
-    if orientation_type == 'single_bin':
+    if orientation_type == 'single-bin':
         return add_dense_layers(backbone_layer, SHAPE_SINGLE_BIN, out_layer_name=LAYER_OUTPUT_NAME_SINGLE_BIN)
     else:
         raise NameError("Invalid orientation_output_type")

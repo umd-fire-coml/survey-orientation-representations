@@ -3,9 +3,7 @@ from build_model import build_model
 from loss_function import get_loss_params
 from metrics import OrientationAccuracy
 import data_processing as dp
-import os
-import argparse
-import time
+import os, re, argparse, time, glob
 from datetime import datetime
 import pathlib
 
@@ -38,7 +36,7 @@ parser.add_argument('--predict', dest='predict', type=str, default="rot-y",
                     help='The target angle to be predicted. Options are rot-y, alpha')
 parser.add_argument('--converter', dest='orientation', type=str,
                     help='Orientation conversion type of the model. '
-                         'Options are alpha, rot_y, tricosine, multibin, voting_bin, single_bin')
+                         'Options are alpha, rot-y, tricosine, multibin, voting-bin, single-bin')
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=8,
                     help='Define the batch size for training. Default value is 8')
 parser.add_argument('--epoch', dest='num_epoch', type=int, default=100,
@@ -83,7 +81,7 @@ if __name__ == "__main__":
 
     if not os.path.isdir(KITTI_DIR):
         raise Exception('kitti_dir is not a directory.')
-    if ORIENTATION not in ['tricosine', 'alpha', 'rot-y', 'multibin', 'voting_bin', 'single_bin']:
+    if ORIENTATION not in ['tricosine', 'alpha', 'rot-y', 'multibin', 'voting-bin', 'single-bin']:
         raise Exception('Invalid Orientation Type.')
     if not 0.0 <= VAL_SPLIT <= 1.0:
         raise Exception('Invalid val_split range between [0.0, 1.0]')
@@ -94,7 +92,7 @@ if __name__ == "__main__":
     pos_enc_stamp = "with_pos_enc" if ADD_POS_ENC else ""
     training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_{pos_enc_stamp}'
     training_stamp_with_timestamp = training_stamp + '_' + timestamp
-    print(f'training stamp ={training_stamp}\ntraining stamp with timestamp ={training_stamp_with_timestamp}')
+    print(f'training stamp with timestamp:{training_stamp_with_timestamp}')
     # format for .h5 weight file
     # old weight_format = 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5'
     weight_format = 'epoch-{epoch:02d}-val_acc-{val_orientation_accuracy:.4f}-train_acc-{orientation_accuracy:.4f}-val_loss-{val_loss:.4f}-train_loss-{loss:.4f}.h5'
@@ -141,18 +139,22 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        old_time_stamp = "alpha_tricosine_with_pos_enc_2021-07-21-11-01-05_1626879665"
-        weights_file_name = "pred_type-alphaepoch-64-loss-0.0163-val_loss-0.1166.h5"
-        init_epoch = 64
-        print(f'resuming from {old_time_stamp}\\{weights_file_name}')
-        stored_weights_file = os.path.join(weights_directory, old_time_stamp, weights_file_name)
-        if not os.path.isfile(stored_weights_file):
-            raise FileNotFoundError(f'stored weights directory "{stored_weights_file}" is not a valid file')
-        model.load_weights(stored_weights_file)
+        old_time_stamp = "rot-y_single_bin_with_pos_enc_2021-07-23-09-41-18_1627047678"
+        old_weight_dir = os.path.join(weights_directory, old_time_stamp)
+        if not os.path.isdir(old_weight_dir): raise Exception(f'Not a good dir: {old_weight_dir}')
+        files = glob.glob(old_weight_dir+"/*")
+        files.sort()
+        latest_files = files[-1]
+        latest_epoch = re.search(r'epoch-(\d\d)-', latest_files).group(1)
+        print(f'The latest file is {latest_files} and its epoch number is {latest_epoch}')
+        init_epoch = int(latest_epoch)
+        if not init_epoch: raise Exception("Fail to match epoch number")
+        exit()
+        if not os.path.isfile(latest_epoch):raise FileNotFoundError(f'stored weights directory "{latest_epoch}" is not a valid file')
+        model.load_weights(latest_epoch)
         # overwrite tensorboard callback
         tb_log_dir = os.path.join(logs_directory, old_time_stamp, "logs", "scalars")
-        if not os.path.isdir(tb_log_dir):
-            raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
+        if not os.path.isdir(tb_log_dir):raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
         # overwrite call back directory
         cp_callback_file = os.path.join(weights_directory, old_time_stamp, weight_format)

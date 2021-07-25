@@ -23,7 +23,7 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
 
     def convert_to_radians(self, tensor):
         # if orientation type is already 'alpha' or 'rot_y', no need to change
-        if self.orientation_type in ['rot_y', 'alpha']:
+        if self.orientation_type in ['rot-y', 'alpha']:
             return angle_normed_to_radians(tensor)
         elif self.orientation_type == 'multibin':
             # return batch_multibin_to_batch_radians(tensor)
@@ -50,14 +50,14 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
         #     elif len(tensor_shape) > len(SHAPE_MULTIBIN):
         #         return tf.stack([self.recursively_convert_to_radians(un_packed_tensor)
         #                          for un_packed_tensor in tf.unstack(tensor)])
-        elif self.orientation_type == 'voting_bin':
+        elif self.orientation_type == 'voting-bin':
             if tensor_shape == SHAPE_VOTING_BIN:
                 alpha = voting_bin_to_radians(arr)
                 return tf.constant(alpha, dtype=TF_TYPE)
             elif len(tensor_shape) > len(SHAPE_VOTING_BIN):
                 return tf.stack([self.recursively_convert_to_radians(un_packed_tensor)
                                  for un_packed_tensor in tf.unstack(tensor)])
-        elif self.orientation_type == 'single_bin':
+        elif self.orientation_type == 'single-bin':
             if tensor_shape == SHAPE_SINGLE_BIN:
                 alpha = single_bin_to_radians(arr)
                 return tf.constant(alpha, dtype=TF_TYPE)
