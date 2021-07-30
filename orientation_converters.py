@@ -128,7 +128,6 @@ def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
     # get how much is the angle offset from the the middle of the left sector
     offset_from_left_sector_mid = np.arccos(left_sector_affinity)
     # get the predicted angle based on offset_from_left_sector_mid then wrap, if tau+1 then 1
-    # left sector will always offset towards the right
     predicted_angle_from_left_sector_offset = (left_sector_mid + offset_from_left_sector_mid) % TAU
 
     # calculate the possible angle based on left sector offset
@@ -143,7 +142,6 @@ def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
     # get how much is the angle offset from the the middle of the right sector
     offset_from_right_sector_mid = np.arccos(right_sector_affinity)
     # get the predicted angle based on offset_from_right_sector_mid then wrap, if -1 then tau-1
-    # left sector will always offset towards the right
     predicted_angle_from_right_sector_offset = (right_sector_mid - offset_from_right_sector_mid) % TAU
 
     # get the predicted angle from bounding sector (based on left right offset signals)
