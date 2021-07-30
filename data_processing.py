@@ -16,7 +16,8 @@ SHAPE_ALPHA_ROT_Y, SHAPE_MULTIBIN, SHAPE_SINGLE_BIN, SHAPE_TRICOSINE, SHAPE_VOTI
 from add_output_layers import LAYER_OUTPUT_NAME_MULTIBIN, LAYER_OUTPUT_NAME_TRICOSINE, LAYER_OUTPUT_NAME_ALPHA_ROT_Y, LAYER_OUTPUT_NAME_VOTING_BIN, LAYER_OUTPUT_NAME_SINGLE_BIN
 
 # constants
-NORM_H, NORM_W = 224, 224
+CROP_RESIZE_H, CROP_RESIZE_W = 224, 224
+IMG_H, IMG_W = 1224, 370
 TRAIN_CLASSES = ['Car', 'Pedestrian', 'Cyclist']
 KITTI_CLASSES = ['Cyclist', 'Tram', 'Person_sitting', 'Truck', 'Pedestrian', 'Van', 'Car', 'Misc', 'DontCare']
 DIFFICULTY = ['easy', 'moderate', 'hard']
@@ -82,7 +83,7 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 
                 # Get camera view angle of the object
                 center = ((obj['xmin'] + obj['xmax']) / 2, (obj['ymin'] + obj['ymax']) / 2)
-                obj['view_angle'] = center[0] / NORM_W * VIEW_ANGLE_TOTAL_X - (VIEW_ANGLE_TOTAL_X / 2)
+                obj['view_angle'] = center[0] / CROP_RESIZE_W * VIEW_ANGLE_TOTAL_X - (VIEW_ANGLE_TOTAL_X / 2)
 
                 # calculate the moving average of each obj dims.
                 # accumulate the sum of each dims for each obj
@@ -100,7 +101,7 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 # get the bounding box,  values for the instance
 # this automatically does flips
 # per image
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool):
+def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool, add_pos_pad: bool):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
@@ -109,9 +110,17 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
 
     # read object image
     img = img_as_float(io.imread(join(image_dir, obj['image_file'])))
-    img = copy.deepcopy(img[ymin:ymax + 1, xmin:xmax + 1])
-    # resize the image to standard size
-    img = resize(img, (NORM_H, NORM_W), anti_aliasing=True)
+    img = img[ymin:ymax + 1, xmin:xmax + 1]
+
+    if add_pos_pad:
+        # set image size to full image size
+        pad = np.zeros(shape=(IMG_H, IMG_W, 3))
+        pad[ymin:ymax + 1, xmin:xmax + 1] = img
+        # if xception gives problem, resize to the nearest number 
+        img = pad
+    else:
+        # resize the image crop to standard size
+        img = resize(img, (CROP_RESIZE_H, CROP_RESIZE_W), anti_aliasing=True)
     img = img.astype(NUMPY_TYPE)
 
     # Get the dimensions offset from average (basically zero centering the values)
@@ -255,7 +264,7 @@ class KittiGenerator(Sequence):
 
         # prepare batch of images
         n_channel = 6 if self.add_pos_enc else 3
-        img_batch = np.empty((num_batch_objs, NORM_H, NORM_W, n_channel))
+        img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
 
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":

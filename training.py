@@ -55,6 +55,7 @@ parser.add_argument('--val_split', dest='val_split', type=float, default=0.2,
                     help='Fraction of the dataset used for validation. Default val_split is 0.2')
 parser.add_argument('--resume', dest = 'resume', type=bool, default=False)
 parser.add_argument('--add_pos_enc', dest = 'add_pos_enc', type=bool, default=False)
+parser.add_argument('--add_pos_pad', dest = 'add_pos_pad', type=bool, default=False)
 args = parser.parse_args()
 
 
@@ -74,6 +75,7 @@ if __name__ == "__main__":
     PREDICTION_TARGET = args.predict
     RESUME = args.resume
     ADD_POS_ENC = args.add_pos_enc
+    ADD_POS_PAD = args.add_pos_pad
     TRAINING_RECORD = args.training_record
 
     LABEL_DIR = os.path.join(KITTI_DIR, 'training/label_2/')
@@ -127,7 +129,10 @@ if __name__ == "__main__":
     print('Training on {:n} objects. Validating on {:n} objects.'.format(len(train_gen.obj_ids), len(val_gen.obj_ids)))
 
     # Building Model
-    model = build_model(ORIENTATION, ADD_POS_ENC)
+    n_channel = 6 if ADD_POS_ENC else 3
+    height = dp.IMG_H if ADD_POS_PAD else dp.CROP_RESIZE_H
+    width = dp.IMG_W if ADD_POS_PAD else dp.CROP_RESIZE_W
+    model = build_model(ORIENTATION, height, width, n_channel)
 
     loss_func, loss_weights = get_loss_params(ORIENTATION)
 
