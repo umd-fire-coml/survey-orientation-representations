@@ -100,7 +100,7 @@ if __name__ == "__main__":
     logs_directory = os.path.join(TRAINING_RECORD, 'logs') if not LOG_DIR_ROOT else LOG_DIR_ROOT
     pathlib.Path(weights_directory).mkdir(parents=True, exist_ok=True)
     pathlib.Path(logs_directory).mkdir(parents=True, exist_ok=True)
-    init_epoch = 1
+    init_epoch = 0
     if not RESUME:
         log_dir = os.path.join(logs_directory, training_stamp_with_timestamp)
         pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        old_time_stamp = "rot-y_single_bin_with_pos_enc_2021-07-23-09-41-18_1627047678"
+        old_time_stamp = "alpha_single_bin_with_pos_enc_2021-07-22-15-11-33_1626981093"
         old_weight_dir = os.path.join(weights_directory, old_time_stamp)
         if not os.path.isdir(old_weight_dir): raise Exception(f'Not a good dir: {old_weight_dir}')
         files = glob.glob(old_weight_dir+"/*")
@@ -153,7 +153,7 @@ if __name__ == "__main__":
         model.load_weights(latest_files)
         # overwrite tensorboard callback
         tb_log_dir = os.path.join(logs_directory, old_time_stamp, "logs", "scalars")
-        if not os.path.isdir(tb_log_dir):raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
+        if not os.path.isdir(tb_log_dir): raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
         # overwrite call back directory
         cp_callback_file = os.path.join(weights_directory, old_time_stamp, weight_format)
