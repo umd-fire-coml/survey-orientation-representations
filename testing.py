@@ -61,7 +61,7 @@ parser.add_argument('--batch_size', dest='batch_size', type=int, default=8,
 parser.add_argument('--kitti_dir', dest='kitti_dir', type=str, default='dataset',
                     help='path to kitti dataset directory. Its subdirectory should have training/ and testing/. Default path is dataset/')
 
-parser.add_argument('--workers', dest='workers', type=int, default=2,
+parser.add_argument('--workers', dest='workers', type=int, default=6,
                     help='amount of worker threads to throw at dataprocessing (more should be better)')
 
 parser.add_argument('--output-dir',dest='output_dir',type= str,default='preds',
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     model.load_weights(WEIGHT)
     start_time = time.time()
 
-    predictions = model.predict(x=test_gen,verbose=1,workers=6,use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
+    predictions = model.predict(x=test_gen,verbose=1,workers= WORKERS,use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
     file_output = []
 
     for i, pred in enumerate(predictions):
