@@ -228,7 +228,8 @@ class KittiGenerator(Sequence):
                  val_split: float = 0.0,
                  prediction_target: str = 'rot_y',
                  all_objs = None,
-                 add_pos_enc: bool = False):
+                 add_pos_enc: bool = False,
+                 add_pos_pad: bool = False):
         self.label_dir = label_dir
         self.image_dir = image_dir
         if all_objs == None:
@@ -242,6 +243,7 @@ class KittiGenerator(Sequence):
         self.prediction_target = prediction_target
         self.obj_ids = list(range(len(self.all_objs)))  # list of all object indexes for the generator
         self.add_pos_enc = add_pos_enc
+        self.add_pos_pad = add_pos_pad
         if val_split > 0.0:
             assert mode != 'all' and val_split < 1.0
             cutoff = int(val_split * len(self.all_objs))  
@@ -264,7 +266,9 @@ class KittiGenerator(Sequence):
 
         # prepare batch of images
         n_channel = 6 if self.add_pos_enc else 3
-        img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
+        height = IMG_H if self.add_pos_pad else CROP_RESIZE_H
+        width = IMG_W if self.add_pos_pad else CROP_RESIZE_W
+        img_batch = np.empty((num_batch_objs, height, width, n_channel))
 
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":
@@ -285,7 +289,12 @@ class KittiGenerator(Sequence):
 
         # insert data
         for i, obj_id in enumerate(self.obj_ids[l_bound:r_bound]):
-            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, self.add_pos_enc)
+            img, orientation = prepare_generator_output(self.image_dir,
+                                                        self.all_objs[obj_id],
+                                                        self.orientation_type,
+                                                        self.prediction_target,
+                                                        self.add_pos_enc,
+                                                        self.add_pos_pad)
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:

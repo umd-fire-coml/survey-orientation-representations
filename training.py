@@ -53,9 +53,9 @@ parser.add_argument('--weight_dir', dest='weight_dir', type=str,
                     help='Relative path to save weights. Default path is training_record/weights')
 parser.add_argument('--val_split', dest='val_split', type=float, default=0.2,
                     help='Fraction of the dataset used for validation. Default val_split is 0.2')
-parser.add_argument('--resume', dest = 'resume', type=bool, default=False)
-parser.add_argument('--add_pos_enc', dest = 'add_pos_enc', type=bool, default=False)
-parser.add_argument('--add_pos_pad', dest = 'add_pos_pad', type=bool, default=False)
+parser.add_argument('--resume', dest='resume', type=bool, default=False)
+parser.add_argument('--add_pos_enc', dest='add_pos_enc', type=bool, default=False)
+parser.add_argument('--add_pos_pad', dest='add_pos_pad', type=bool, default=False)
 args = parser.parse_args()
 
 
@@ -121,11 +121,11 @@ if __name__ == "__main__":
     # Generator config
     train_gen = dp.KittiGenerator(label_dir=LABEL_DIR, image_dir=IMG_DIR, batch_size=BATCH_SIZE,
                                   orientation_type=ORIENTATION, mode='train', val_split=VAL_SPLIT, prediction_target=PREDICTION_TARGET,
-                                  add_pos_enc=ADD_POS_ENC)
+                                  add_pos_enc=ADD_POS_ENC, add_pos_pad= ADD_POS_PAD)
     val_gen = dp.KittiGenerator(label_dir=LABEL_DIR, image_dir=IMG_DIR, batch_size=BATCH_SIZE,
                                    orientation_type=ORIENTATION, mode='val', val_split=VAL_SPLIT,
                                    all_objs=train_gen.all_objs, prediction_target=PREDICTION_TARGET,
-                                   add_pos_enc=ADD_POS_ENC)
+                                   add_pos_enc=ADD_POS_ENC, add_pos_pad= ADD_POS_PAD)
     print('Training on {:n} objects. Validating on {:n} objects.'.format(len(train_gen.obj_ids), len(val_gen.obj_ids)))
 
     # Building Model
