@@ -101,7 +101,7 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 # get the bounding box,  values for the instance
 # this automatically does flips
 # per image
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool, add_pos_pad: bool):
+def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
