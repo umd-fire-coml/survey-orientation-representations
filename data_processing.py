@@ -110,17 +110,16 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
 
     # read object image
     img = img_as_float(io.imread(join(image_dir, obj['image_file'])))
-    img = img[ymin:ymax + 1, xmin:xmax + 1]
+    pos_enc = get_2d_pos_enc(*img.shape)
 
-    if add_pos_pad:
-        # set image size to full image size
-        pad = np.zeros(shape=(IMG_H, IMG_W, 3))
-        pad[ymin:ymax + 1, xmin:xmax + 1,:] = img
-        # if xception gives problem, resize to the nearest number 
-        img = pad
+    if add_pos_enc:
+        stacked = np.concatenate((img, pos_enc), axis=-1)
+        img = stacked[ymin:ymax + 1, xmin:xmax + 1]
     else:
-        # resize the image crop to standard size
-        img = resize(img, (CROP_RESIZE_H, CROP_RESIZE_W), anti_aliasing=True)
+        img = img[ymin:ymax + 1, xmin:xmax + 1]
+        
+    # resize the image crop to standard size
+    img = resize(img, (CROP_RESIZE_H, CROP_RESIZE_W), anti_aliasing=True)
     img = img.astype(NUMPY_TYPE)
 
     # Get the dimensions offset from average (basically zero centering the values)
@@ -132,11 +131,6 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
     # flip image horizontally
     if flip:
         img = np.fliplr(img)
-
-        # add positional encoding
-        if add_pos_enc:
-            img = cat_pos_enc_to_img(img)
-
         if orientation_type == 'multibin':
             if 'multibin_orientation_flipped' not in obj:
                 # Get orientation and confidence values for flip
@@ -168,10 +162,6 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
     else:
-
-        if add_pos_enc:
-            img = cat_pos_enc_to_img(img)
-
         if orientation_type == 'multibin':
             if 'multibin_orientation' not in obj:
                 # Get orientation and confidence values for flip
@@ -203,11 +193,7 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
 
-def cat_pos_enc_to_img(img):
-    img_shape = img.shape
-    pos_enc = get_2d_pos_enc(*img_shape)
-    return np.concatenate((img, pos_enc), axis=-1)
-
+            
 class KittiGenerator(Sequence):
     '''Creates A KittiGenerator Sequence
     Args:
@@ -228,8 +214,7 @@ class KittiGenerator(Sequence):
                  val_split: float = 0.0,
                  prediction_target: str = 'rot_y',
                  all_objs = None,
-                 add_pos_enc: bool = False,
-                 add_pos_pad: bool = False):
+                 add_pos_enc: bool = False):
         self.label_dir = label_dir
         self.image_dir = image_dir
         if all_objs == None:
@@ -243,7 +228,6 @@ class KittiGenerator(Sequence):
         self.prediction_target = prediction_target
         self.obj_ids = list(range(len(self.all_objs)))  # list of all object indexes for the generator
         self.add_pos_enc = add_pos_enc
-        self.add_pos_pad = add_pos_pad
         if val_split > 0.0:
             assert mode != 'all' and val_split < 1.0
             cutoff = int(val_split * len(self.all_objs))  
@@ -266,9 +250,7 @@ class KittiGenerator(Sequence):
 
         # prepare batch of images
         n_channel = 6 if self.add_pos_enc else 3
-        height = IMG_H if self.add_pos_pad else CROP_RESIZE_H
-        width = IMG_W if self.add_pos_pad else CROP_RESIZE_W
-        img_batch = np.empty((num_batch_objs, height, width, n_channel))
+        img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
 
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":
@@ -293,8 +275,7 @@ class KittiGenerator(Sequence):
                                                         self.all_objs[obj_id],
                                                         self.orientation_type,
                                                         self.prediction_target,
-                                                        self.add_pos_enc,
-                                                        self.add_pos_pad)
+                                                        self.add_pos_enc)
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:
