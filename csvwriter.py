@@ -19,6 +19,7 @@ with open("preds/voting_bin.json","r+") as fp:
 with open("preds/tricosine.json","r+") as fp:
     tricosine_preds = json.load(fp,object_hook=json_numpy_obj_hook)
 sygyzy={}
+
 for p in alpha_preds:
     pred_alpha = conv.angle_normed_to_radians(p['pred'][0])
     imgid = p['img_id']

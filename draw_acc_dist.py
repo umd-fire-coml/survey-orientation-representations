@@ -44,64 +44,15 @@ if __name__ == "__main__":
         
         with open(o_path,"r+") as fp:
             o_preds = json.load(fp,object_hook=json_numpy_obj_hook)
+        for pred in o_preds:
+            imgid = pred['img_id']
+            if (imgid not in images):
+                images[imgid]={}
+            if pred['line'] not in images[imgid]:
+                images[imgid][pred['line']] ={}
+            for ptype in pred['pred']:
+                images[imgid][pred['line']][ptype] = pred['pred'][ptype]
         
-        if orientation=='alpha':
-            for p in o_preds:
-            # get the first value, i.e. the alpha prediction
-                pred_alpha = conv.angle_normed_to_radians(p['pred'][0])
-                imgid = p['img_id']
-                if (imgid not in images):
-                    images[imgid]={}
-                if p['line'] not in images[imgid]:
-                    images[imgid][p['line']] ={}
-                images[imgid][p['line']]['norm_alpha'] =p['pred'][0]
-                images[imgid][p['line']]['pred_alpha'] = pred_alpha
-        elif orientation == 'rot_y':
-            for p in o_preds:
-                # get the first value, i.e. the rot_y prediction
-                pred_roty = conv.angle_normed_to_radians(p['pred'][0])
-                imgid = p['img_id']
-                if (imgid not in images):
-                     images[imgid]={}
-                if p['line'] not in images[imgid]:
-                    images[imgid][p['line']] ={}
-                images[imgid][p['line']]['norm_roty'] = p['pred'][0]
-                images[imgid][p['line']]['pred_roty'] = pred_roty
-                tokens = p['line'].strip().split(' ')
-                images[imgid][p['line']]['conv_roty'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13]))
-        elif orientation == 'single_bin':
-            for p in o_preds:
-                conv_single = conv.single_bin_to_radians(p['pred'])
-                imgid = p['img_id']
-                if (imgid not in images):
-                     images[imgid]={}
-                if p['line'] not in images[imgid]:
-                    images[imgid][p['line']] ={}
-                images[imgid][p['line']]['single_pred'] = p['pred']
-                images[imgid][p['line']]['conv_single'] = conv_single
-        elif orientation == 'voting_bin':
-            for p in o_preds:
-                conv_voting = conv.voting_bin_to_radians(p['pred'])
-                imgid = p['img_id']
-                if (conv_voting>math.pi):
-                    conv_voting-=math.tau
-                if (imgid not in images):
-                    images[imgid]={}
-                if p['line'] not in images[imgid]:
-                    images[imgid][p['line']] ={}
-                images[imgid][p['line']]['voting_pred'] = p['pred']
-                images[imgid][p['line']]['conv_voting'] = conv_voting
-        elif orientation =='tricosine':
-            for p in o_preds:
-                conv_tri = conv.tricosine_to_radians(p['pred'])
-                imgid = p['img_id']
-                if (imgid not in images): # create a dict for each img_id
-                     images[imgid]={}
-                if p['line'] not in images[imgid]:
-                    images[imgid][p['line']] ={}
-                images[imgid][p['line']]['tricosine_pred'] = p['pred']
-                images[imgid][p['line']]['conv_tricosine'] = conv_tri
-
         # overlay accuracy distribution
         # label each graph with mean accuracy
     instances = []
@@ -176,7 +127,7 @@ if __name__ == "__main__":
             if 'tricosine' in ORIENTATIONS:
                 deltas = df['conv_tricosine']-df['gt_alpha']
                 tri_accuracy = (1+np.cos(deltas))/2
-                num_preds = len(voting_accuracy)
+                num_preds = len(tri_accuracy)
                 instance_num = [idx/num_preds for idx, acc in enumerate(tri_accuracy)]
                 sorted_tri = [i for i in reversed(sorted(tri_accuracy))]
                 pyplot.plot(instance_num, sorted_tri, marker='.', label='Tricosine')
@@ -184,7 +135,7 @@ if __name__ == "__main__":
             pyplot.title('Difficulty: '+difficulty)
             # axis labels
             pyplot.xlabel('Instance')
-            pyplot.ylabel('Accuracy')
+            pyplot.ylabel('Similarity')
             # show the legend
             pyplot.legend()
             # show the plot

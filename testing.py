@@ -121,7 +121,30 @@ if __name__ == "__main__":
     file_output = []
 
     for i, pred in enumerate(predictions):
-        file_output.append({'pred':pred, # pred outputs in orientation type
+        preds = {}
+        if ORIENTATION=='alpha':
+            pred_alpha = conv.angle_normed_to_radians(pred[0])
+            preds['norm_alpha'] = pred
+            preds['pred_alpha'] = pred_alpha
+        elif ORIENTATION == 'rot_y':
+            pred_roty = conv.angle_normed_to_radians(pred[0])
+            tokens = test_gen.all_objs[i]['line'].strip().split(' ')
+            preds['norm_roty'] = pred
+            preds['pred_roty'] = pred_roty
+            preds['conv_roty'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13]))
+        elif ORIENTATION == 'single_bin':
+            conv_single = conv.single_bin_to_radians(pred)
+            preds['pred_single'] = pred
+            preds['conv_single'] = conv_single
+        elif ORIENTATION == 'voting_bin':
+            conv_voting = conv.voting_bin_to_radians(pred)
+            preds['voting_pred'] = pred
+            preds['conv_voting'] = conv_voting
+        elif ORIENTATION =='tricosine':
+            conv_tri = conv.tricosine_to_radians(pred)
+            preds['tricosine_pred'] = pred
+            preds['conv_tricosine'] = conv_tri
+        file_output.append({'pred':preds, # pred outputs in orientation type
                        'line':test_gen.all_objs[i]['line'], # kitti line
                        'img_id':test_gen.all_objs[i]['image_file'][0:6]})
     with open(os.path.join("preds", ORIENTATION+".json"), "w") as fp:
