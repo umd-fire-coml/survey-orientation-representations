@@ -17,7 +17,7 @@ from add_output_layers import LAYER_OUTPUT_NAME_MULTIBIN, LAYER_OUTPUT_NAME_TRIC
 
 # constants
 CROP_RESIZE_H, CROP_RESIZE_W = 224, 224
-IMG_H, IMG_W = 1224, 370
+IMG_H, IMG_W = 376, 1242
 TRAIN_CLASSES = ['Car', 'Pedestrian', 'Cyclist']
 KITTI_CLASSES = ['Cyclist', 'Tram', 'Person_sitting', 'Truck', 'Pedestrian', 'Van', 'Car', 'Misc', 'DontCare']
 DIFFICULTY = ['easy', 'moderate', 'hard']
@@ -115,7 +115,7 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
     if add_pos_pad:
         # set image size to full image size
         pad = np.zeros(shape=(IMG_H, IMG_W, 3))
-        pad[ymin:ymax + 1, xmin:xmax + 1] = img
+        pad[ymin:ymax + 1, xmin:xmax + 1,:] = img
         # if xception gives problem, resize to the nearest number 
         img = pad
     else:
