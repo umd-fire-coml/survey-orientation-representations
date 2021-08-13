@@ -26,7 +26,7 @@ import math
 import json
 import orientation_converters as conv
 from serialize import NumpyEncoder,json_numpy_obj_hook
-
+from build_model import build_model
 # init code
 tf.config.list_physical_devices('GPU')
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -66,9 +66,12 @@ parser.add_argument('--workers', dest='workers', type=int, default=6,
 parser.add_argument('--output-dir',dest='output_dir',type= str,default='preds',
                    help='Relative path to store the predictions')
 
-parser.add_argument('--target',dest='target',type=str,default=None,help="target orientation")
+parser.add_argument('--orientation',dest='orientation',type=str,default=None,help='Orientation conversion type of the model. Options are alpha, rot-y, tricosine, multibin, voting-bin, single-bin')
+parser.add_argument('--pos_enc',dest = "add_pos_enc",type=bool,default = False)
 
-parser.add_argument('--pred',dest='pred',type=str,default = None,help="predicted orientation")
+parser.add_argument('--predict',dest='predict',type=str,default = "rot_y",help="predicted target angle of weights, as weight name does not have. Either rot_y or alpha")
+
+parser.add_argument('--target',dest='target',type=str,default = "alpha",help='the target angle to convert to. Choose alpha rot_y') # have no idea
 
 args = parser.parse_args()        
 #helper
@@ -93,7 +96,9 @@ if __name__ == "__main__":
     WEIGHT = args.weight_path
     WORKERS = args.workers
     OUTPUT_DIR = args.output_dir
-    
+    ADD_POS_ENC = args.add_pos_enc
+    PREDICTION_TARGET = args.predict
+    ANGLE_TARGET = args.target
     '''
     head, tail = os.path.split(WEIGHT)
     wargs = tail.strip().split('-')
@@ -117,14 +122,17 @@ if __name__ == "__main__":
         PREDICTION_TARGET = 'rot_y'
     # Generator config
     test_gen = dp.KittiGenerator(label_dir=LABEL_DIR, image_dir=IMG_DIR, batch_size=BATCH_SIZE,
-                                  orientation_type=ORIENTATION, mode='test',prediction_target=PREDICTION_TARGET)
+                                  orientation_type=ORIENTATION, mode='test',prediction_target=PREDICTION_TARGET,add_pos_enc=ADD_POS_ENC)
     print('Testing on {:n} objects. '.format(len(test_gen.obj_ids)))
     # Building Model
-    inputs = Input(shape=(224, 224, 3))
-    x = Xception_model(inputs, pooling='avg')
-    x = add_output_layers(ORIENTATION, x)
-    model = Model(inputs=inputs, outputs=x)
+    n_channel = 6 if ADD_POS_ENC else 3
+    height = dp.CROP_RESIZE_H
+    width = dp.CROP_RESIZE_W
+    model = build_model(ORIENTATION, height, width, n_channel)
     loss_func, loss_weights = get_loss_params(ORIENTATION)
+    
+    
+    
     model.compile(loss=loss_func, optimizer='adam',
                   metrics=[OrientationAccuracy(ORIENTATION)], run_eagerly=True)
     model.load_weights(WEIGHT)
@@ -139,28 +147,53 @@ if __name__ == "__main__":
             pred_alpha = conv.angle_normed_to_radians(pred[0])
             preds['norm_alpha'] = pred
             preds['pred_alpha'] = pred_alpha
+            
+            preds['target'] = pred_alpha if ANGLE_TARGET=='alpha' else conv.alpha_to_rot_y(pred_alpha,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION == 'rot_y':
             pred_roty = conv.angle_normed_to_radians(pred[0])
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['norm_roty'] = pred
             preds['pred_roty'] = pred_roty
-            preds['conv_roty'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13]))
+            preds['target'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13])) if ANGLE_TARGET=='alpha' else pred_roty
         elif ORIENTATION == 'single_bin':
             conv_single = conv.single_bin_to_radians(pred)
+            tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['pred_single'] = pred
             preds['conv_single'] = conv_single
+            if ANGLE_TARGET == PREDICTION_TARGET:
+                preds['target'] = conv_single
+            elif ANGLE_TARGET=='rot_y':
+                preds['target']= conv.alpha_to_rot_y( conv_single,float(tokens[11]),float(tokens[13]))
+            else:
+                preds['target'] = conv.rot_y_to_alpha(conv_single,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION == 'voting_bin':
             conv_voting = conv.voting_bin_to_radians(pred)
+            tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['voting_pred'] = pred
             preds['conv_voting'] = conv_voting
+            if ANGLE_TARGET == PREDICTION_TARGET:
+                preds['target'] =conv_voting
+            elif ANGLE_TARGET=='rot_y':
+                preds['target']= conv.alpha_to_rot_y( conv_voting,float(tokens[11]),float(tokens[13]))
+            else:
+                preds['target'] = conv.rot_y_to_alpha(conv_voting,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION =='tricosine':
             conv_tri = conv.tricosine_to_radians(pred)
+            tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['tricosine_pred'] = pred
             preds['conv_tricosine'] = conv_tri
+            if ANGLE_TARGET == PREDICTION_TARGET:
+                preds['target'] =conv_tri
+            elif ANGLE_TARGET=='rot_y':
+                preds['target']= conv.alpha_to_rot_y( conv_tri,float(tokens[11]),float(tokens[13]))
+            else:
+                preds['target'] = conv.rot_y_to_alpha(conv_tri,float(tokens[11]),float(tokens[13]))
         file_output.append({'pred':preds, # pred outputs in orientation type
                        'line':test_gen.all_objs[i]['line'], # kitti line
                        'img_id':test_gen.all_objs[i]['image_file'][0:6]})
-    with open(os.path.join("preds", ORIENTATION+".json"), "w") as fp:
+    _, fname = os.path.split(WEIGHT)
+    w_text,_ = os.path.splitext(fname)
+    with open(os.path.join("preds", fname+".json"), "w") as fp:
         json.dump(file_output, fp, cls=NumpyEncoder)
     
     

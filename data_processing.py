@@ -10,12 +10,14 @@ from os.path import join
 from tensorflow.keras.utils import Sequence
 from tqdm import tqdm
 from random import random
+from positional_encoder import get_2d_pos_enc
 from orientation_converters import (radians_to_angle_normed, radians_to_multibin, radians_to_single_bin, radians_to_tricosine, radians_to_voting_bin,
 SHAPE_ALPHA_ROT_Y, SHAPE_MULTIBIN, SHAPE_SINGLE_BIN, SHAPE_TRICOSINE, SHAPE_VOTING_BIN)
 from add_output_layers import LAYER_OUTPUT_NAME_MULTIBIN, LAYER_OUTPUT_NAME_TRICOSINE, LAYER_OUTPUT_NAME_ALPHA_ROT_Y, LAYER_OUTPUT_NAME_VOTING_BIN, LAYER_OUTPUT_NAME_SINGLE_BIN
 
 # constants
-NORM_H, NORM_W = 224, 224
+CROP_RESIZE_H, CROP_RESIZE_W = 224, 224
+IMG_H, IMG_W = 376, 1242
 TRAIN_CLASSES = ['Car', 'Pedestrian', 'Cyclist']
 KITTI_CLASSES = ['Cyclist', 'Tram', 'Person_sitting', 'Truck', 'Pedestrian', 'Van', 'Car', 'Misc', 'DontCare']
 DIFFICULTY = ['easy', 'moderate', 'hard']
@@ -75,13 +77,13 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
                         'loc_x': float(obj_line_tokens[11]),
                         'loc_y': float(obj_line_tokens[12]),
                         'loc_z': float(obj_line_tokens[13]),
-                        'rot_y': float(obj_line_tokens[14]),
+                        'rot-y': float(obj_line_tokens[14]),
                         'line': obj_line
                        }
 
                 # Get camera view angle of the object
                 center = ((obj['xmin'] + obj['xmax']) / 2, (obj['ymin'] + obj['ymax']) / 2)
-                obj['view_angle'] = center[0] / NORM_W * VIEW_ANGLE_TOTAL_X - (VIEW_ANGLE_TOTAL_X / 2)
+                obj['view_angle'] = center[0] / CROP_RESIZE_W * VIEW_ANGLE_TOTAL_X - (VIEW_ANGLE_TOTAL_X / 2)
 
                 # calculate the moving average of each obj dims.
                 # accumulate the sum of each dims for each obj
@@ -98,7 +100,8 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 
 # get the bounding box,  values for the instance
 # this automatically does flips
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, is_testing=False):
+# per image
+def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool, is_testing=False):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
@@ -107,16 +110,23 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
 
     # read object image
     img = img_as_float(io.imread(join(image_dir, obj['image_file'])))
-    img = copy.deepcopy(img[ymin:ymax + 1, xmin:xmax + 1])
-    # resize the image to standard size
-    img = resize(img, (NORM_H, NORM_W), anti_aliasing=True)
+    pos_enc = get_2d_pos_enc(*img.shape)
+
+    if add_pos_enc:
+        stacked = np.concatenate((img, pos_enc), axis=-1)
+        img = stacked[ymin:ymax + 1, xmin:xmax + 1]
+    else:
+        img = img[ymin:ymax + 1, xmin:xmax + 1]
+        
+    # resize the image crop to standard size
+    img = resize(img, (CROP_RESIZE_H, CROP_RESIZE_W), anti_aliasing=True)
     img = img.astype(NUMPY_TYPE)
 
     # Get the dimensions offset from average (basically zero centering the values)
     obj['dims_mean_offset'] = obj['dims'] - class_dims_means[obj['class_name']]
  
-    # flip the image by random chance, do not flip if testing
-    flip = (random() < 0.5) and (not is_testing) 
+    # flip the image by random chance
+    flip = (random() < 0.5) and (not is_testing)
 
     # flip image horizontally
     if flip:
@@ -133,22 +143,22 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
             if 'tricosine_flipped' not in obj:
                 obj['tricosine_flipped'] = radians_to_tricosine(math.tau - obj[prediction_target])
             return img, obj['tricosine_flipped']
-        elif orientation_type == 'voting_bin':
+        elif orientation_type == 'voting-bin':
             if 'voting_bin_flipped' not in obj:
-                obj['voting_bin_flipped'] = radians_to_voting_bin(math.tau - obj[prediction_target])
-            return img, obj['voting_bin_flipped']
-        elif orientation_type == 'single_bin':
-            if 'single_bin_flipped' not in obj:
-                obj['single_bin_flipped'] = radians_to_single_bin(math.tau - obj[prediction_target])
-            return img, obj['single_bin_flipped']
+                obj['voting-bin_flipped'] = radians_to_voting_bin(math.tau - obj[prediction_target])
+            return img, obj['voting-bin_flipped']
+        elif orientation_type == 'single-bin':
+            if 'single-bin_flipped' not in obj:
+                obj['single-bin_flipped'] = radians_to_single_bin(math.tau - obj[prediction_target])
+            return img, obj['single-bin_flipped']
         elif orientation_type == 'alpha' and prediction_target == 'alpha':
             if 'alpha_normed_flipped' not in obj:
                 obj['alpha_normed_flipped'] = radians_to_angle_normed(math.tau - obj['alpha'])
             return img, obj['alpha_normed_flipped']  
-        elif orientation_type == 'rot_y' and prediction_target == 'rot_y':
-            if 'rot_y_normed_flipped' not in obj:
-                obj['rot_y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot_y'])
-            return img, obj['rot_y_normed_flipped']
+        elif orientation_type == 'rot-y' and prediction_target == 'rot-y':
+            if 'rot-y_normed_flipped' not in obj:
+                obj['rot-y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot_y'])
+            return img, obj['rot-y_normed_flipped']
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
     else:
@@ -164,25 +174,26 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
             if 'tricosine' not in obj:
                 obj['tricosine'] = radians_to_tricosine(obj[prediction_target])
             return img, obj['tricosine']
-        elif orientation_type == 'voting_bin':
-            if 'voting_bin' not in obj:
-                obj['voting_bin'] = radians_to_voting_bin(obj[prediction_target])
-            return img, obj['voting_bin']
-        elif orientation_type == 'single_bin':
-            if 'single_bin' not in obj:
-                obj['single_bin'] = radians_to_single_bin(obj[prediction_target])
-            return img, obj['single_bin']
+        elif orientation_type == 'voting-bin':
+            if 'voting-bin' not in obj:
+                obj['voting-bin'] = radians_to_voting_bin(obj[prediction_target])
+            return img, obj['voting-bin']
+        elif orientation_type == 'single-bin':
+            if 'single-bin' not in obj:
+                obj['single-bin'] = radians_to_single_bin(obj[prediction_target])
+            return img, obj['single-bin']
         elif orientation_type == 'alpha' and prediction_target == 'alpha':
             if 'alpha_normed' not in obj:
                 obj['alpha_normed'] = radians_to_angle_normed(obj['alpha'])
             return img, obj['alpha_normed']
-        elif orientation_type == 'rot_y' and prediction_target == 'rot_y':
-            if 'rot_y_normed' not in obj:
-                obj['rot_y_normed'] = radians_to_angle_normed(obj['rot_y'])
-            return img, obj['rot_y_normed']
+        elif orientation_type == 'rot-y' and prediction_target == 'rot-y':
+            if 'rot-y_normed' not in obj:
+                obj['rot-y_normed'] = radians_to_angle_normed(obj['rot-y'])
+            return img, obj['rot-y_normed']
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
 
+            
 class KittiGenerator(Sequence):
     '''Creates A KittiGenerator Sequence
     Args:
@@ -200,9 +211,10 @@ class KittiGenerator(Sequence):
                  get_kitti_line: bool = False,
                  batch_size: int = 8,
                  orientation_type: str = "multibin",
-                 val_split: float = 0.2,
+                 val_split: float = 0.0,
                  prediction_target: str = 'rot_y',
-                 all_objs = None):
+                 all_objs = None,
+                 add_pos_enc: bool = False):
         self.label_dir = label_dir
         self.image_dir = image_dir
         if all_objs == None:
@@ -215,6 +227,7 @@ class KittiGenerator(Sequence):
         self.orientation_type = orientation_type
         self.prediction_target = prediction_target
         self.obj_ids = list(range(len(self.all_objs)))  # list of all object indexes for the generator
+        self.add_pos_enc = add_pos_enc
         if val_split > 0.0:
             assert mode != 'all' and val_split < 1.0
             cutoff = int(val_split * len(self.all_objs))  
@@ -236,7 +249,8 @@ class KittiGenerator(Sequence):
         num_batch_objs = r_bound - l_bound
 
         # prepare batch of images
-        img_batch = np.empty((num_batch_objs, NORM_H, NORM_W, 3))
+        n_channel = 6 if self.add_pos_enc else 3
+        img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
 
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":
@@ -245,18 +259,23 @@ class KittiGenerator(Sequence):
             orientation_batch = np.empty((num_batch_objs, *SHAPE_TRICOSINE))
         elif self.orientation_type == "alpha" or self.orientation_type == 'rot_y':
             orientation_batch = np.empty((num_batch_objs, *SHAPE_ALPHA_ROT_Y))
-        elif self.orientation_type == "voting_bin":
+        elif self.orientation_type == "voting-bin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_VOTING_BIN))
-        elif self.orientation_type == "single_bin":
+        elif self.orientation_type == "single-bin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_SINGLE_BIN))
         else:
             raise Exception("Invalid Orientation Type")
 
         # prepare kitti line output for visualization
         line_batch = []
+
         # insert data
         for i, obj_id in enumerate(self.obj_ids[l_bound:r_bound]):
-            img, orientation = prepare_generator_output(self.image_dir, self.all_objs[obj_id], self.orientation_type, self.prediction_target, is_testing=(self.mode=='test'))
+            img, orientation = prepare_generator_output(self.image_dir,
+                                                        self.all_objs[obj_id],
+                                                        self.orientation_type,
+                                                        self.prediction_target,
+                                                        self.add_pos_enc)
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:
@@ -268,17 +287,16 @@ class KittiGenerator(Sequence):
             y_batch = {LAYER_OUTPUT_NAME_TRICOSINE: orientation_batch}
         elif self.orientation_type == "alpha" or self.orientation_type == 'rot_y':
             y_batch = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: orientation_batch}
-        elif self.orientation_type == "voting_bin":
+        elif self.orientation_type == "voting-bin":
             y_batch = {LAYER_OUTPUT_NAME_VOTING_BIN: orientation_batch}
-        elif self.orientation_type == "single_bin":
+        elif self.orientation_type == "single-bin":
             y_batch = {LAYER_OUTPUT_NAME_SINGLE_BIN: orientation_batch}
         else:
             raise Exception("Invalid Orientation Type")
         
         if self.get_kitti_line:
             y_batch['line_batch'] = line_batch
-            
-        
+
         return img_batch, y_batch
 
     def on_epoch_end(self):
