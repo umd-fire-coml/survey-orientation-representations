@@ -49,8 +49,7 @@ if gpus:
         print(e)
         
 parser = argparse.ArgumentParser(description='Testing Model')
-parser.add_argument(dest='orientation', type=str,
-                    help='Orientation Type of the model. Options are tricosine, alpha, rot_y, multibin')
+#parser.add_argument(dest='orientation', type=str, help='Orientation Type of the model. Options are tricosine, alpha, rot_y, multibin')
 
 parser.add_argument('weight_path', type=str, help='Relative path to save weights. Default path is weights')
 
@@ -66,6 +65,10 @@ parser.add_argument('--workers', dest='workers', type=int, default=6,
 
 parser.add_argument('--output-dir',dest='output_dir',type= str,default='preds',
                    help='Relative path to store the predictions')
+
+parser.add_argument('--target',dest='target',type=str,default=None,help="target orientation")
+
+parser.add_argument('--pred',dest='pred',type=str,default = None,help="predicted orientation")
 
 args = parser.parse_args()        
 #helper
@@ -85,11 +88,21 @@ def loss_func(orientation):
 
 if __name__ == "__main__":
     BATCH_SIZE = args.batch_size
-    ORIENTATION = args.orientation
+    
     KITTI_DIR = args.kitti_dir
     WEIGHT = args.weight_path
     WORKERS = args.workers
     OUTPUT_DIR = args.output_dir
+    
+    '''
+    head, tail = os.path.split(WEIGHT)
+    wargs = tail.strip().split('-')
+    if len(wargs) == 6: // this is the old format
+        ORIENTATION = wargs[]
+    
+    '''
+    
+    ORIENTATION = args.orientation
     if not os.path.isdir(KITTI_DIR):
         raise Exception('kitti_dir is not a directory.')
     if not os.path.isdir(OUTPUT_DIR):

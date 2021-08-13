@@ -22,6 +22,7 @@ parser.add_argument('--pred-dir', dest='pred_dir', type=str, default = './preds'
                     help='The relative paths to directory the predictions are stored in.')      
 parser.add_argument('--output-dir', dest='output_dir',type= str, default='./charts',
                    help='The relative path to store the charts')
+parser.add_argument('--pred-type',default = 'alpha') # decide if roty or alpha
 args = parser.parse_args()
 
 
