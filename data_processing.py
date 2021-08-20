@@ -77,7 +77,7 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
                         'loc_x': float(obj_line_tokens[11]),
                         'loc_y': float(obj_line_tokens[12]),
                         'loc_z': float(obj_line_tokens[13]),
-                        'rot-y': float(obj_line_tokens[14]),
+                        'rot_y': float(obj_line_tokens[14]),
                         'line': obj_line
                        }
 
@@ -143,22 +143,22 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
             if 'tricosine_flipped' not in obj:
                 obj['tricosine_flipped'] = radians_to_tricosine(math.tau - obj[prediction_target])
             return img, obj['tricosine_flipped']
-        elif orientation_type == 'voting-bin':
+        elif orientation_type == 'voting_bin':
             if 'voting_bin_flipped' not in obj:
-                obj['voting-bin_flipped'] = radians_to_voting_bin(math.tau - obj[prediction_target])
-            return img, obj['voting-bin_flipped']
-        elif orientation_type == 'single-bin':
-            if 'single-bin_flipped' not in obj:
-                obj['single-bin_flipped'] = radians_to_single_bin(math.tau - obj[prediction_target])
-            return img, obj['single-bin_flipped']
+                obj['voting_bin_flipped'] = radians_to_voting_bin(math.tau - obj[prediction_target])
+            return img, obj['voting_bin_flipped']
+        elif orientation_type == 'single_bin':
+            if 'single_bin_flipped' not in obj:
+                obj['single_bin_flipped'] = radians_to_single_bin(math.tau - obj[prediction_target])
+            return img, obj['single_bin_flipped']
         elif orientation_type == 'alpha' and prediction_target == 'alpha':
             if 'alpha_normed_flipped' not in obj:
                 obj['alpha_normed_flipped'] = radians_to_angle_normed(math.tau - obj['alpha'])
             return img, obj['alpha_normed_flipped']  
-        elif orientation_type == 'rot-y' and prediction_target == 'rot-y':
-            if 'rot-y_normed_flipped' not in obj:
-                obj['rot-y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot_y'])
-            return img, obj['rot-y_normed_flipped']
+        elif orientation_type == 'rot_y' and prediction_target == 'rot_y':
+            if 'rot_y_normed_flipped' not in obj:
+                obj['rot_y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot_y'])
+            return img, obj['rot_y_normed_flipped']
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
     else:
@@ -174,22 +174,22 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
             if 'tricosine' not in obj:
                 obj['tricosine'] = radians_to_tricosine(obj[prediction_target])
             return img, obj['tricosine']
-        elif orientation_type == 'voting-bin':
-            if 'voting-bin' not in obj:
-                obj['voting-bin'] = radians_to_voting_bin(obj[prediction_target])
-            return img, obj['voting-bin']
-        elif orientation_type == 'single-bin':
-            if 'single-bin' not in obj:
-                obj['single-bin'] = radians_to_single_bin(obj[prediction_target])
-            return img, obj['single-bin']
+        elif orientation_type == 'voting_bin':
+            if 'voting_bin' not in obj:
+                obj['voting_bin'] = radians_to_voting_bin(obj[prediction_target])
+            return img, obj['voting_bin']
+        elif orientation_type == 'single_bin':
+            if 'single_bin' not in obj:
+                obj['single_bin'] = radians_to_single_bin(obj[prediction_target])
+            return img, obj['single_bin']
         elif orientation_type == 'alpha' and prediction_target == 'alpha':
             if 'alpha_normed' not in obj:
                 obj['alpha_normed'] = radians_to_angle_normed(obj['alpha'])
             return img, obj['alpha_normed']
-        elif orientation_type == 'rot-y' and prediction_target == 'rot-y':
-            if 'rot-y_normed' not in obj:
-                obj['rot-y_normed'] = radians_to_angle_normed(obj['rot-y'])
-            return img, obj['rot-y_normed']
+        elif orientation_type == 'rot_y' and prediction_target == 'rot_y':
+            if 'rot_y_normed' not in obj:
+                obj['rot_y_normed'] = radians_to_angle_normed(obj['rot_y'])
+            return img, obj['rot_y_normed']
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
 
@@ -259,9 +259,9 @@ class KittiGenerator(Sequence):
             orientation_batch = np.empty((num_batch_objs, *SHAPE_TRICOSINE))
         elif self.orientation_type == "alpha" or self.orientation_type == 'rot_y':
             orientation_batch = np.empty((num_batch_objs, *SHAPE_ALPHA_ROT_Y))
-        elif self.orientation_type == "voting-bin":
+        elif self.orientation_type == "voting_bin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_VOTING_BIN))
-        elif self.orientation_type == "single-bin":
+        elif self.orientation_type == "single_bin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_SINGLE_BIN))
         else:
             raise Exception("Invalid Orientation Type")
@@ -275,7 +275,8 @@ class KittiGenerator(Sequence):
                                                         self.all_objs[obj_id],
                                                         self.orientation_type,
                                                         self.prediction_target,
-                                                        self.add_pos_enc)
+                                                        self.add_pos_enc,
+                                                        is_testing=self.mode=='test')
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:
@@ -287,9 +288,9 @@ class KittiGenerator(Sequence):
             y_batch = {LAYER_OUTPUT_NAME_TRICOSINE: orientation_batch}
         elif self.orientation_type == "alpha" or self.orientation_type == 'rot_y':
             y_batch = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: orientation_batch}
-        elif self.orientation_type == "voting-bin":
+        elif self.orientation_type == "voting_bin":
             y_batch = {LAYER_OUTPUT_NAME_VOTING_BIN: orientation_batch}
-        elif self.orientation_type == "single-bin":
+        elif self.orientation_type == "single_bin":
             y_batch = {LAYER_OUTPUT_NAME_SINGLE_BIN: orientation_batch}
         else:
             raise Exception("Invalid Orientation Type")

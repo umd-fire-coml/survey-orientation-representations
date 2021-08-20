@@ -51,6 +51,8 @@ if gpus:
 parser = argparse.ArgumentParser(description='Testing Model')
 #parser.add_argument(dest='orientation', type=str, help='Orientation Type of the model. Options are tricosine, alpha, rot_y, multibin')
 
+parser.add_argument('orientation',type=str,default=None,help='Orientation conversion type of the model. Options are alpha, rot-y, tricosine, multibin, voting-bin, single-bin')
+
 parser.add_argument('weight_path', type=str, help='Relative path to save weights. Default path is weights')
 
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=8,
@@ -66,12 +68,11 @@ parser.add_argument('--workers', dest='workers', type=int, default=6,
 parser.add_argument('--output-dir',dest='output_dir',type= str,default='preds',
                    help='Relative path to store the predictions')
 
-parser.add_argument('--orientation',dest='orientation',type=str,default=None,help='Orientation conversion type of the model. Options are alpha, rot-y, tricosine, multibin, voting-bin, single-bin')
 parser.add_argument('--pos_enc',dest = "add_pos_enc",type=bool,default = False)
 
-parser.add_argument('--predict',dest='predict',type=str,default = "rot_y",help="predicted target angle of weights, as weight name does not have. Either rot_y or alpha")
+parser.add_argument('--predict',dest='predict',type=str,default = "rot_y",help="predicted target angle of weights, as weight name does not have. Either rot_y or alpha") # this is the output of the model, which is converted to the next step
 
-parser.add_argument('--target',dest='target',type=str,default = "alpha",help='the target angle to convert to. Choose alpha rot_y') # have no idea
+parser.add_argument('--target',dest='target',type=str,default = "alpha",help='the target angle to convert to. Choose alpha rot_y') # this is what the model will be converted to
 
 args = parser.parse_args()        
 #helper
@@ -139,7 +140,7 @@ if __name__ == "__main__":
     start_time = time.time()
 
     predictions = model.predict(x=test_gen,verbose=1,workers= WORKERS,use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
-    file_output = []
+    file_output = [{"target":ANGLE_TARGET,"orientation":ORIENTATION}]
 
     for i, pred in enumerate(predictions):
         preds = {}
@@ -148,46 +149,46 @@ if __name__ == "__main__":
             preds['norm_alpha'] = pred
             preds['pred_alpha'] = pred_alpha
             
-            preds['target'] = pred_alpha if ANGLE_TARGET=='alpha' else conv.alpha_to_rot_y(pred_alpha,float(tokens[11]),float(tokens[13]))
+            preds['target_alpha'] = pred_alpha if ANGLE_TARGET=='alpha' else conv.alpha_to_rot_y(pred_alpha,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION == 'rot_y':
             pred_roty = conv.angle_normed_to_radians(pred[0])
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['norm_roty'] = pred
             preds['pred_roty'] = pred_roty
-            preds['target'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13])) if ANGLE_TARGET=='alpha' else pred_roty
+            preds['target_roty'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13])) if ANGLE_TARGET=='alpha' else pred_roty
         elif ORIENTATION == 'single_bin':
             conv_single = conv.single_bin_to_radians(pred)
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['pred_single'] = pred
             preds['conv_single'] = conv_single
             if ANGLE_TARGET == PREDICTION_TARGET:
-                preds['target'] = conv_single
+                preds['target_single'] = conv_single
             elif ANGLE_TARGET=='rot_y':
-                preds['target']= conv.alpha_to_rot_y( conv_single,float(tokens[11]),float(tokens[13]))
+                preds['target_single']= conv.alpha_to_rot_y( conv_single,float(tokens[11]),float(tokens[13]))
             else:
-                preds['target'] = conv.rot_y_to_alpha(conv_single,float(tokens[11]),float(tokens[13]))
+                preds['target_single'] = conv.rot_y_to_alpha(conv_single,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION == 'voting_bin':
             conv_voting = conv.voting_bin_to_radians(pred)
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['voting_pred'] = pred
             preds['conv_voting'] = conv_voting
             if ANGLE_TARGET == PREDICTION_TARGET:
-                preds['target'] =conv_voting
+                preds['target_voting'] =conv_voting
             elif ANGLE_TARGET=='rot_y':
-                preds['target']= conv.alpha_to_rot_y( conv_voting,float(tokens[11]),float(tokens[13]))
+                preds['target_voting']= conv.alpha_to_rot_y( conv_voting,float(tokens[11]),float(tokens[13]))
             else:
-                preds['target'] = conv.rot_y_to_alpha(conv_voting,float(tokens[11]),float(tokens[13]))
+                preds['target_voting'] = conv.rot_y_to_alpha(conv_voting,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION =='tricosine':
             conv_tri = conv.tricosine_to_radians(pred)
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
             preds['tricosine_pred'] = pred
             preds['conv_tricosine'] = conv_tri
             if ANGLE_TARGET == PREDICTION_TARGET:
-                preds['target'] =conv_tri
+                preds['target_tricosine'] =conv_tri
             elif ANGLE_TARGET=='rot_y':
-                preds['target']= conv.alpha_to_rot_y( conv_tri,float(tokens[11]),float(tokens[13]))
+                preds['target_tricosine']= conv.alpha_to_rot_y( conv_tri,float(tokens[11]),float(tokens[13]))
             else:
-                preds['target'] = conv.rot_y_to_alpha(conv_tri,float(tokens[11]),float(tokens[13]))
+                preds['target_tricosine'] = conv.rot_y_to_alpha(conv_tri,float(tokens[11]),float(tokens[13]))
         file_output.append({'pred':preds, # pred outputs in orientation type
                        'line':test_gen.all_objs[i]['line'], # kitti line
                        'img_id':test_gen.all_objs[i]['image_file'][0:6]})
