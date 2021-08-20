@@ -19,7 +19,6 @@ for ppath in os.listdir('preds/'):
     if ext=='.json':
         with open("preds/"+ppath,"r+") as fp:
             loaded_json = json.load(fp,object_hook=json_numpy_obj_hook)
-        loaded_json = loaded_json[1:]
         for p in loaded_json:
             imgid = p['img_id']
             if (imgid not in sygyzy):

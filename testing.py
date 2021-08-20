@@ -140,7 +140,7 @@ if __name__ == "__main__":
     start_time = time.time()
 
     predictions = model.predict(x=test_gen,verbose=1,workers= WORKERS,use_multiprocessing=False) # this speeds up the code speed by 4x, but is too hard to work with, will recommend multiprocessing false for training
-    file_output = [{"target":ANGLE_TARGET,"orientation":ORIENTATION}]
+    file_output = []
 
     for i, pred in enumerate(predictions):
         preds = {}
@@ -153,31 +153,31 @@ if __name__ == "__main__":
         elif ORIENTATION == 'rot_y':
             pred_roty = conv.angle_normed_to_radians(pred[0])
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
-            preds['norm_roty'] = pred
-            preds['pred_roty'] = pred_roty
-            preds['target_roty'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13])) if ANGLE_TARGET=='alpha' else pred_roty
+            preds['norm_rot_y'] = pred
+            preds['pred_rot_y'] = pred_roty
+            preds['target_rot_y'] = conv.rot_y_to_alpha(pred_roty,float(tokens[11]),float(tokens[13])) if ANGLE_TARGET=='alpha' else pred_roty
         elif ORIENTATION == 'single_bin':
             conv_single = conv.single_bin_to_radians(pred)
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
-            preds['pred_single'] = pred
-            preds['conv_single'] = conv_single
+            preds['pred_single_bin'] = pred
+            preds['conv_single_bin'] = conv_single
             if ANGLE_TARGET == PREDICTION_TARGET:
-                preds['target_single'] = conv_single
+                preds['target_single_bin'] = conv_single
             elif ANGLE_TARGET=='rot_y':
-                preds['target_single']= conv.alpha_to_rot_y( conv_single,float(tokens[11]),float(tokens[13]))
+                preds['target_single_bin']= conv.alpha_to_rot_y( conv_single,float(tokens[11]),float(tokens[13]))
             else:
-                preds['target_single'] = conv.rot_y_to_alpha(conv_single,float(tokens[11]),float(tokens[13]))
+                preds['target_single_bin'] = conv.rot_y_to_alpha(conv_single,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION == 'voting_bin':
             conv_voting = conv.voting_bin_to_radians(pred)
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
-            preds['voting_pred'] = pred
-            preds['conv_voting'] = conv_voting
+            preds['voting_bin_pred'] = pred
+            preds['conv_voting_bin'] = conv_voting
             if ANGLE_TARGET == PREDICTION_TARGET:
-                preds['target_voting'] =conv_voting
+                preds['target_voting_bin'] =conv_voting
             elif ANGLE_TARGET=='rot_y':
-                preds['target_voting']= conv.alpha_to_rot_y( conv_voting,float(tokens[11]),float(tokens[13]))
+                preds['target_voting_bin']= conv.alpha_to_rot_y( conv_voting,float(tokens[11]),float(tokens[13]))
             else:
-                preds['target_voting'] = conv.rot_y_to_alpha(conv_voting,float(tokens[11]),float(tokens[13]))
+                preds['target_voting_bin'] = conv.rot_y_to_alpha(conv_voting,float(tokens[11]),float(tokens[13]))
         elif ORIENTATION =='tricosine':
             conv_tri = conv.tricosine_to_radians(pred)
             tokens = test_gen.all_objs[i]['line'].strip().split(' ')
@@ -194,7 +194,7 @@ if __name__ == "__main__":
                        'img_id':test_gen.all_objs[i]['image_file'][0:6]})
     _, fname = os.path.split(WEIGHT)
     w_text,_ = os.path.splitext(fname)
-    with open(os.path.join("preds", fname+".json"), "w") as fp:
+    with open(os.path.join("preds", ANGLE_TARGET+"-"+ORIENTATION+"-"+fname+".json"), "w") as fp:
         json.dump(file_output, fp, cls=NumpyEncoder)
     
     

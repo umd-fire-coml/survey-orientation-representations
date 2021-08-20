@@ -31,6 +31,7 @@ if __name__ == "__main__":
     PREDICTION_DIR = args.pred_dir
     OUTPUT_DIR = args.output_dir
     all_orientations = []
+    target_angles = []
     if not os.path.isdir(PREDICTION_DIR):
         raise Exception('kitti_dir is not a directory.')
     if not os.path.isdir(OUTPUT_DIR):
@@ -52,21 +53,20 @@ if __name__ == "__main__":
         
         with open(o_path,"r+") as fp:
             o_preds = json.load(fp,object_hook=json_numpy_obj_hook)
-            
-        header = o_preds[0]
-        o_preds = o_preds[1:]
-        orientation = header['orientation']
+        
+        file_args = w_text.strip().split("-")
+        
+        orientation = file_args[1]
         all_orientations.append(orientation)
-        target_angle = header['target']
+        target_angle = file_args[0] #roty or alpha
+        target_angles.append(target_angle)
+        
         
         if orientation not in ['tricosine','alpha','rot_y','multibin','voting_bin','single_bin']:
             raise Exception("orientation '%s' is not currently supported "%orientation)
         if not os.path.isfile(o_path):
             raise Exception("orientation has no prediction file in :'%s'"%o_path)
             
-            
-        target = o_preds[0]
-        o_preds[1:]
         for pred in o_preds:
             imgid = pred['img_id']
             if (imgid not in images):
@@ -115,46 +115,16 @@ if __name__ == "__main__":
         hard =  df.loc[(df['difficulty'] == 'hard')]
         for difficulty in ['easy','mod','hard']:
             df = eval(difficulty)
-            if 'alpha' in all_orientations:
-                deltas = df['pred_alpha']-df['gt_'+target_angle]
-                alpha_accuracy = 0.5 * (1.0 + np.cos(deltas))
-                num_preds = len(alpha_accuracy)
-                instance_num = [idx/num_preds for idx, acc in enumerate(alpha_accuracy)]
-                sorted_alpha = [acc for acc in reversed(sorted(alpha_accuracy))]
-                pyplot.plot(instance_num, sorted_alpha, marker='.', label='Alpha')
-                print("%s alpha overall is : %f "%(difficulty,mean(sorted_alpha)))
-            if 'rot_y' in all_orientations:
-                deltas = df['conv_roty']-df['gt_'+target_angle]
-                roty_accuracy = (1+np.cos(deltas))/2
-                num_preds = len(roty_accuracy)
-                instance_num = [idx/num_preds for idx, acc in enumerate(roty_accuracy)]
-                sorted_roty = [i for i in reversed(sorted(roty_accuracy ))]
-                pyplot.plot(instance_num, sorted_roty, marker='.', label='Rot_y')
-                print("%s rot_y overall is : %f"%(difficulty,mean(sorted_roty)))
-            if 'single_bin' in all_orientations:
-                deltas = df['conv_single']-df['gt_'+target_angle]
-                single_accuracy = (1+np.cos(deltas))/2
-                num_preds = len(single_accuracy)
-                instance_num = [idx/num_preds for idx, acc in enumerate(single_accuracy)]
-                sorted_single = [acc for acc in reversed(sorted(single_accuracy))]
-                pyplot.plot(instance_num, sorted_single, marker='.', label='Single')
-                print("%s single bin overall is : %f"%(difficulty,mean(sorted_single)))
-            if 'voting_bin' in all_orientations:
-                deltas = df['conv_voting']-df['gt_'+target_angle]
-                voting_accuracy = (1+np.cos(deltas))/2
-                num_preds = len(voting_accuracy)
-                instance_num = [idx/num_preds for idx, acc in enumerate(voting_accuracy)]
-                sorted_voting = [i for i in reversed(sorted(voting_accuracy))]
-                pyplot.plot(instance_num, sorted_voting, marker='.', label='Voting')
-                print("%s sorted bin overall is : %f"%(difficulty, mean(sorted_voting)))
-            if 'tricosine' in all_orientations:
-                deltas = df['conv_tricosine']-df['gt_'+target_angle]
-                tri_accuracy = (1+np.cos(deltas))/2
-                num_preds = len(tri_accuracy)
-                instance_num = [idx/num_preds for idx, acc in enumerate(tri_accuracy)]
-                sorted_tri = [i for i in reversed(sorted(tri_accuracy))]
-                pyplot.plot(instance_num, sorted_tri, marker='.', label='Tricosine')
-                print("%s tricosine overall is : %f"%(difficulty,mean(sorted_tri)))
+            for i,orientation in enumerate(all_orientations):
+                target_angle = target_angles[i]
+                deltas = df['target_'+orientation]-df['gt_'+target_angle]
+                angle_accuracy = 0.5 * (1.0 + np.cos(deltas))
+                num_preds = len(angle_accuracy)
+                instance_num = [idx/num_preds for idx, acc in enumerate(angle_accuracy)]
+                sorted_alpha = [acc for acc in reversed(sorted(angle_accuracy))]
+                pyplot.plot(instance_num, sorted_alpha, marker='.', label=target_angle+'_'+orientation) # predicted angle, model type
+                print("%s (target:%s model:%s) mean acc is : %f "%(difficulty,target_angle,orientation,mean(sorted_alpha)))
+                
             pyplot.title('Difficulty: '+difficulty)
             # axis labels
             pyplot.xlabel('Instance')
