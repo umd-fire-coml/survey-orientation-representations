@@ -110,9 +110,9 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
 
     # read object image
     img = img_as_float(io.imread(join(image_dir, obj['image_file'])))
-    pos_enc = get_2d_pos_enc(*img.shape)
 
     if add_pos_enc:
+        pos_enc = get_2d_pos_enc(*img.shape)
         stacked = np.concatenate((img, pos_enc), axis=-1)
         img = stacked[ymin:ymax + 1, xmin:xmax + 1]
     else:
