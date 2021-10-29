@@ -73,7 +73,7 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
         # convert to alphas using orientation_converters and calculate the batch_accuracies
         alpha_true = self.convert_to_radians(y_true)
         alpha_pred = self.convert_to_radians(y_pred)
-        batch_sum_accuracy = self.sum_angle_accuracy(alpha_true, alpha_pred)
+        batch_sum_accuracy = tf.cast(self.sum_angle_accuracy(alpha_true, alpha_pred), tf.float32)
 
         # update the cur_accuracy
         self.sum_accuracy.assign_add(batch_sum_accuracy)

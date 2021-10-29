@@ -254,7 +254,7 @@ def batch_multibin_to_batch_radians(batch_multibin):
     return tf.map_fn(multibin_to_radians, batch_multibin)
 
 # alpha and rot_y constants
-ALPHA_ROT_Y_NORM_FACTOR = np.pi
+ALPHA_ROT_Y_NORM_FACTOR = tf.constant(np.pi, dtype=tf.float64)
 SHAPE_ALPHA_ROT_Y = (1,)
 
 def radians_to_angle_normed(angle_rad):
@@ -262,7 +262,7 @@ def radians_to_angle_normed(angle_rad):
     return angle_rad / ALPHA_ROT_Y_NORM_FACTOR
 
 def angle_normed_to_radians(angle_normed):
-    return angle_normed * ALPHA_ROT_Y_NORM_FACTOR
+    return  ALPHA_ROT_Y_NORM_FACTOR * tf.cast(angle_normed, dtype= tf.float64)
 
 def alpha_to_rot_y(alpha, loc_x, loc_z):
     return alpha + np.arctan(loc_x/loc_z)

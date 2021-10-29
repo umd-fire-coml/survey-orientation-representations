@@ -14,17 +14,20 @@ loss_tricosine_weights = {LAYER_OUTPUT_NAME_TRICOSINE: 1.0}
 def __loss_alpha_rot_y_l2(y_true, y_pred):
     return l2_loss(y_true, y_pred)
 
-loss_alpha_rot_y = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: __loss_alpha_rot_y}
+loss_alpha_rot_y = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: __loss_alpha_rot_y_l2}
 loss_alpha_rot_y_weights = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: 1.0}
 
 
 def __loss_alpha_rot_y_angular(y_true, y_pred):
-    ### TODO
     y_true_rad = angle_normed_to_radians(y_true)
     y_pred_rad = angle_normed_to_radians(y_pred)
-    y_true_2D_point = tf.asarray([tf.cos(y_true_rad), tf.sin(y_true_rad)])
-    y_pred_2D_point = tf.asarray([tf.cos(y_pred_rad), tf.sin(y_pred_rad)])
-    loss = sum(y_true_2D_point * y_pred_2D_point) / sqrt(sum(y_true_2D_point**2 + y_pred_2D_point**2))
+    y_true_2D_point = [tf.cos(y_true_rad), tf.sin(y_true_rad)]
+    y_pred_2D_point = [tf.cos(y_pred_rad), tf.sin(y_pred_rad)]
+    loss = tf.tensordot(y_true_2D_point, y_pred_2D_point, 0) / (tf.norm(y_true_2D_point)*tf.norm(y_pred_2D_point))
+    return loss
+
+loss_alpha_rot_y_angular = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y:__loss_alpha_rot_y_angular}
+loss_alpha_rot_y_angular_weights = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: 1.0}
 
 def __loss_multibin(y_true, y_pred):
 
@@ -45,9 +48,9 @@ def __loss_single_bin_l2(y_true, y_pred):
 
 def __loss_single_bin_angular(y_true, y_pred):
     ### TODO
+    pass
 
-
-loss_single_bin = {LAYER_OUTPUT_NAME_SINGLE_BIN: __loss_single_bin}
+loss_single_bin = {LAYER_OUTPUT_NAME_SINGLE_BIN: __loss_single_bin_l2}
 loss_single_bin_weights = {LAYER_OUTPUT_NAME_SINGLE_BIN: 1.0}
 
 
@@ -59,7 +62,7 @@ loss_voting_bin_weights = {LAYER_OUTPUT_NAME_VOTING_BIN: 1.0}
 
 
 
-def get_loss_params(orientation):
+def get_loss_params(orientation, use_angular_loss):
     if orientation == 'tricosine':
         return loss_tricosine, loss_tricosine_weights
     elif orientation == 'alpha' or orientation == 'rot-y':
@@ -70,5 +73,8 @@ def get_loss_params(orientation):
         return loss_voting_bin, loss_voting_bin_weights
     elif orientation == 'single-bin':
         return loss_single_bin, loss_single_bin_weights
+    elif use_angular_loss:
+        return loss_alpha_rot_y_angular, loss_alpha_rot_y_angular_weights
     else:
         raise Exception('Incorrect orientation type for loss function')
+    
