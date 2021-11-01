@@ -3,7 +3,10 @@ import os
 import math
 import numpy as np
 import copy
+import pathlib
 from skimage import io
+from skimage.transform import resize
+import skimage
 from skimage.util import img_as_float
 from skimage.transform import resize
 from os.path import join
@@ -101,7 +104,12 @@ def get_all_objs_from_kitti_dir(label_dir, image_dir, difficulty='hard'):
 # get the bounding box,  values for the instance
 # this automatically does flips
 # per image
-def prepare_generator_output(image_dir: str, obj, orientation_type: str, prediction_target: str, add_pos_enc: bool):
+def prepare_generator_output(image_dir: str, 
+                            obj, 
+                            orientation_type: str, 
+                            prediction_target: str, 
+                            add_pos_enc: bool,
+                            add_depth_map: bool):
     # Prepare image patch
     xmin = obj['xmin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
     ymin = obj['ymin']  # + np.random.randint(-MAX_JIT, MAX_JIT+1)
@@ -115,6 +123,14 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
         pos_enc = get_2d_pos_enc(*img.shape)
         stacked = np.concatenate((img, pos_enc), axis=-1)
         img = stacked[ymin:ymax + 1, xmin:xmax + 1]
+    elif add_depth_map:
+        depth_map_path = pathlib.Path(image_dir).parents[0] / "predict_depth" / f'depth_{obj["image_file"]}'
+        depth_map = img_as_float(io.imread(depth_map_path))
+        depth_map = resize(depth_map, img.shape[:2])
+        depth_map = np.expand_dims(depth_map, -1)
+        stacked = np.concatenate((img, depth_map), axis=-1)
+        img = stacked[ymin:ymax + 1, xmin:xmax + 1]
+
     else:
         img = img[ymin:ymax + 1, xmin:xmax + 1]
         
@@ -157,7 +173,7 @@ def prepare_generator_output(image_dir: str, obj, orientation_type: str, predict
             return img, obj['alpha_normed_flipped']  
         elif orientation_type == 'rot-y' and prediction_target == 'rot-y':
             if 'rot-y_normed_flipped' not in obj:
-                obj['rot-y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot_y'])
+                obj['rot-y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot-y'])
             return img, obj['rot-y_normed_flipped']
         else:
             raise Exception(f"Invalid orientation_type: {orientation_type}, with prediction_target: {prediction_target}")
@@ -212,15 +228,17 @@ class KittiGenerator(Sequence):
                  batch_size: int = 8,
                  orientation_type: str = "multibin",
                  val_split: float = 0.0,
-                 prediction_target: str = 'rot_y',
+                 prediction_target: str = 'rot-y',
                  all_objs = None,
-                 add_pos_enc: bool = False):
-        self.label_dir = label_dir
-        self.image_dir = image_dir
+                 add_pos_enc: bool = False,
+                 add_depth_map: bool = False):
+
         if all_objs == None:
             self.all_objs = get_all_objs_from_kitti_dir(label_dir, image_dir)
         else:
             self.all_objs = all_objs
+        self.label_dir = label_dir
+        self.image_dir = image_dir
         self.get_kitti_line = get_kitti_line
         self.mode = mode
         self.batch_size = batch_size
@@ -228,6 +246,8 @@ class KittiGenerator(Sequence):
         self.prediction_target = prediction_target
         self.obj_ids = list(range(len(self.all_objs)))  # list of all object indexes for the generator
         self.add_pos_enc = add_pos_enc
+        self.add_depth_map = add_depth_map
+
         if val_split > 0.0:
             assert mode != 'all' and val_split < 1.0
             cutoff = int(val_split * len(self.all_objs))  
@@ -249,15 +269,17 @@ class KittiGenerator(Sequence):
         num_batch_objs = r_bound - l_bound
 
         # prepare batch of images
-        n_channel = 6 if self.add_pos_enc else 3
-        img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
+        n_channel = 3 # by defualt 3 channels: RGB
+        if self.add_pos_enc: n_channel = 6 # RGB + posidional encoding
+        elif self.add_depth_map : n_channel = 4 # RGB + depth map
 
+        img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_MULTIBIN))
         elif self.orientation_type == 'tricosine':
             orientation_batch = np.empty((num_batch_objs, *SHAPE_TRICOSINE))
-        elif self.orientation_type == "alpha" or self.orientation_type == 'rot_y':
+        elif self.orientation_type == "alpha" or self.orientation_type == 'rot-y':
             orientation_batch = np.empty((num_batch_objs, *SHAPE_ALPHA_ROT_Y))
         elif self.orientation_type == "voting-bin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_VOTING_BIN))
@@ -275,7 +297,8 @@ class KittiGenerator(Sequence):
                                                         self.all_objs[obj_id],
                                                         self.orientation_type,
                                                         self.prediction_target,
-                                                        self.add_pos_enc)
+                                                        self.add_pos_enc,
+                                                        self.add_depth_map)
             img_batch[i] = img
             orientation_batch[i] = orientation
             if self.get_kitti_line:
@@ -285,7 +308,7 @@ class KittiGenerator(Sequence):
             y_batch = {LAYER_OUTPUT_NAME_MULTIBIN: orientation_batch}
         elif self.orientation_type == 'tricosine':
             y_batch = {LAYER_OUTPUT_NAME_TRICOSINE: orientation_batch}
-        elif self.orientation_type == "alpha" or self.orientation_type == 'rot_y':
+        elif self.orientation_type == "alpha" or self.orientation_type == 'rot-y':
             y_batch = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: orientation_batch}
         elif self.orientation_type == "voting-bin":
             y_batch = {LAYER_OUTPUT_NAME_VOTING_BIN: orientation_batch}

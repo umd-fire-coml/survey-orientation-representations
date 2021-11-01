@@ -31,13 +31,13 @@ loss_alpha_rot_y_angular_weights = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: 1.0}
 
 def __loss_multibin(y_true, y_pred):
 
-    loss_conf = tf.reduce_sum(l2_loss(y_true[..., 2:], y_pred[..., 2:]), 1)
-
-    loss_orientation = l2_loss(y_true[..., 0], y_pred[..., 0]) + l2_loss(y_true[..., 1], y_pred[..., 1])
-
-    # print(f'shape of loss_conf:{loss_conf.shape}\nshape of loss_orientation: {loss_orientation.shape}')
-
-    return loss_conf + loss_orientation
+    #loss_conf = tf.reduce_sum(l2_loss(y_true[..., 2:], y_pred[..., 2:]), 1)
+    loss_conf = l2_loss(y_true[..., 2:], y_pred[..., 2:])
+    # loss_orientation = l2_loss(y_true[..., 0], y_pred[..., 0]) + l2_loss(y_true[..., 1], y_pred[..., 1])
+    loss_orientation = tf.transpose(tf.stack([l2_loss(y_true[..., 0], y_pred[..., 0]) , l2_loss(y_true[..., 1], y_pred[..., 1])]))
+    loss = tf.reduce_sum(loss_conf*loss_orientation, 1)
+    #return loss_conf + loss_orientation
+    return loss
 
 loss_multibin = {LAYER_OUTPUT_NAME_MULTIBIN: __loss_multibin}
 loss_multibin_weights = {LAYER_OUTPUT_NAME_MULTIBIN: 1.0}

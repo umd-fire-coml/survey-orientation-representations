@@ -162,7 +162,7 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        old_time_stamp = "rot-y_single-bin_with_pos_enc_2021-10-03-02-46-01_1633243561"
+        old_time_stamp = "rot-y_single-bin_with_depth_map_2021-10-31-22-03-16_1635732196"
         old_weight_dir = os.path.join(weights_directory, old_time_stamp)
         if not os.path.isdir(old_weight_dir): raise Exception(f'Not a good dir: {old_weight_dir}')
         files = glob.glob(old_weight_dir+"/*")
