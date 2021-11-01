@@ -1,5 +1,6 @@
 dataset
 weights
+depth_single_bin/
 preds
 .ipynb_checkpoints
 records/
