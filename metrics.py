@@ -85,7 +85,7 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
         return tf.math.divide(self.sum_accuracy, tf.cast(self.num_pairs, dtype=TF_TYPE))
 
     # Reset state
-    def reset_states(self):
+    def reset_state(self):
         self.num_pairs = tf.Variable(0, dtype=tf.dtypes.int32)  # num of pairs of y_true, y_pred
         # sum of accuracies for each pair of y_true, y_pred
         self.sum_accuracy = tf.Variable(0., dtype=TF_TYPE)
