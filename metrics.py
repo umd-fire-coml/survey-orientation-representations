@@ -1,5 +1,6 @@
 import tensorflow as tf
-from orientation_converters import (angle_normed_to_radians, single_bin_to_radians, tricosine_to_radians, multibin_orientation_confidence_to_radians, voting_bin_to_radians, batch_multibin_to_batch_radians,multibin_to_radians,SHAPE_TRICOSINE, SHAPE_SINGLE_BIN, SHAPE_VOTING_BIN)
+from orientation_converters import SHAPE_TRICOSINE, SHAPE_SINGLE_BIN, SHAPE_VOTING_BIN
+from orientation_converters import *
 
 TF_TYPE = tf.dtypes.float32
 
@@ -27,7 +28,7 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
             return angle_normed_to_radians(tensor)
         elif self.orientation_type == 'multibin':
             # return batch_multibin_to_batch_radians(tensor)
-            return multibin_to_radians(tensor)
+            return multi_affinity_to_radians(tensor)
         else:
             return self.recursively_convert_to_radians(tensor)
 

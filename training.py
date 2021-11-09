@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import sort
 import tensorflow as tf
 from build_model import build_model
 from loss_function import get_loss_params
@@ -77,7 +78,7 @@ if __name__ == "__main__":
     PREDICTION_TARGET = args.predict
     RESUME = args.resume
     ADD_POS_ENC = args.add_pos_enc
-    TRAINING_RECORD = args.training_record
+    TRAINING_RECORD = pathlib.Path(args.training_record)   
     ANGULAR_LOSS = args.use_angular_loss
     ADD_DEPTH_MAP = args.add_depth_map
 
@@ -93,42 +94,40 @@ if __name__ == "__main__":
         raise Exception('Invalid val_split range between [0.0, 1.0]')
     if ADD_DEPTH_MAP and (not os.path.isdir(DEPTH_PATH_DIR)):
         raise Exception("Unable to find depth maps. Please put depth map under /kitti_dataset/training/predic_depth")
-    if ADD_POS_ENC and ADD_DEPTH_MAP:
-        raise Exception("You can only enable one of the \"positional encoding\" and \"depth map\"")
 
     # get training starting time and construct stamps
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time))
+    training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}'
     if ADD_POS_ENC:
-        training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_with_pos_enc_{timestamp}'
-        # pos_enc_stamp = "with_pos_enc" if ADD_POS_ENC else ""
-        # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_{pos_enc_stamp}'
-        # training_stamp_with_timestamp = training_stamp + '_' + timestamp
-    elif ADD_DEPTH_MAP:
-        training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_with_depth_map_{timestamp}'
-    else:
-        training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_{timestamp}'
+        # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_with_pos_enc_{timestamp}'
+        training_stamp += "_with_pos_enc"
+    if ADD_DEPTH_MAP:
+        # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_with_depth_map_{timestamp}'
+        training_stamp +="_with_depth_map"
+    # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_{timestamp}'
+    training_stamp += f"_{timestamp}"
     print(f'training stamp with timestamp:{training_stamp}')
     # format for .h5 weight file
     # old weight_format = 'epoch-{epoch:02d}-loss-{loss:.4f}-val_loss-{val_loss:.4f}.h5'
     weight_format = 'epoch-{epoch:02d}-val_acc-{val_orientation_accuracy:.4f}-train_acc-{orientation_accuracy:.4f}-val_loss-{val_loss:.4f}-train_loss-{loss:.4f}.h5'
-    weights_directory = os.path.join(TRAINING_RECORD, 'weights') if not WEIGHT_DIR_ROOT else WEIGHT_DIR_ROOT
-    logs_directory = os.path.join(TRAINING_RECORD, 'logs') if not LOG_DIR_ROOT else LOG_DIR_ROOT
-    pathlib.Path(weights_directory).mkdir(parents=True, exist_ok=True)
-    pathlib.Path(logs_directory).mkdir(parents=True, exist_ok=True)
+    weights_directory = TRAINING_RECORD / 'weights' if not WEIGHT_DIR_ROOT else WEIGHT_DIR_ROOT
+    logs_directory = TRAINING_RECORD /  'logs' if not LOG_DIR_ROOT else LOG_DIR_ROOT
+    weights_directory.mkdir(parents=True, exist_ok=True)
+    logs_directory.mkdir(parents=True, exist_ok=True)
     init_epoch = 0
     if not RESUME:
-        log_dir = os.path.join(logs_directory, training_stamp)
-        pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
-        checkpoint_dir = os.path.join(weights_directory, training_stamp)
-        pathlib.Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+        log_dir = logs_directory / training_stamp
+        log_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint_dir = weights_directory / training_stamp
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # model callback config
-        checkpoint_file_name = os.path.join(checkpoint_dir, weight_format)
+        checkpoint_file_name = checkpoint_dir / weight_format
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_file_name, save_weights_only=True, verbose=1)
         # tensorboard logs path
-        tb_log_dir = os.path.join(log_dir, "logs/scalars/")
+        tb_log_dir = log_dir / "logs/scalars/"
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir=tb_log_dir, histogram_freq=1)
 
@@ -144,7 +143,9 @@ if __name__ == "__main__":
 
     # Building Model
     n_channel = 3
-    if ADD_POS_ENC:
+    if ADD_DEPTH_MAP and ADD_DEPTH_MAP:
+        n_channel = 7
+    elif ADD_POS_ENC:
         n_channel = 6
     elif ADD_DEPTH_MAP:
         n_channel = 4
@@ -162,10 +163,13 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        old_time_stamp = "rot-y_single-bin_with_depth_map_2021-10-31-22-03-16_1635732196"
-        old_weight_dir = os.path.join(weights_directory, old_time_stamp)
-        if not os.path.isdir(old_weight_dir): raise Exception(f'Not a good dir: {old_weight_dir}')
-        files = glob.glob(old_weight_dir+"/*")
+        # old_time_stamp = "rot-y_rot-y_2021-11-07-01-15-56_1636262156"
+        sub_directories = [path for path in weights_directory.iterdir()]
+        sub_directories.sort()
+        latest_training_dir = sub_directories[-1]
+        print('-----------------------------------------------')
+        print(f'Resume training from directory: {latest_training_dir}')
+        files = glob.glob(latest_training_dir+"/*")
         files.sort()
         latest_files = files[-1]
         latest_epoch = re.search(r'epoch-(\d\d)-', latest_files).group(1)
@@ -175,11 +179,11 @@ if __name__ == "__main__":
         if not os.path.isfile(latest_files):raise FileNotFoundError(f'stored weights directory "{latest_files}" is not a valid file')
         model.load_weights(latest_files)
         # overwrite tensorboard callback
-        tb_log_dir = os.path.join(logs_directory, old_time_stamp, "logs", "scalars")
+        tb_log_dir = logs_directory / latest_training_dir / "logs" / "scalars"
         if not os.path.isdir(tb_log_dir): raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
         # overwrite call back directory
-        cp_callback_file = os.path.join(weights_directory, old_time_stamp, weight_format)
+        cp_callback_file = weights_directory / latest_training_dir / weight_format
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=cp_callback_file, save_weights_only=True, verbose=1)
 

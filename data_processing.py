@@ -14,9 +14,9 @@ from tensorflow.keras.utils import Sequence
 from tqdm import tqdm
 from random import random
 from positional_encoder import get_2d_pos_enc
-from orientation_converters import (radians_to_angle_normed, radians_to_multibin, radians_to_single_bin, radians_to_tricosine, radians_to_voting_bin,
-SHAPE_ALPHA_ROT_Y, SHAPE_MULTIBIN, SHAPE_SINGLE_BIN, SHAPE_TRICOSINE, SHAPE_VOTING_BIN)
-from add_output_layers import LAYER_OUTPUT_NAME_MULTIBIN, LAYER_OUTPUT_NAME_TRICOSINE, LAYER_OUTPUT_NAME_ALPHA_ROT_Y, LAYER_OUTPUT_NAME_VOTING_BIN, LAYER_OUTPUT_NAME_SINGLE_BIN
+from orientation_converters import (SHAPE_ALPHA_ROT_Y, SHAPE_MULTI_AFFINITY_BIN, SHAPE_SINGLE_BIN, SHAPE_TRICOSINE, SHAPE_VOTING_BIN)
+from orientation_converters import *
+from add_output_layers import *
 
 # constants
 CROP_RESIZE_H, CROP_RESIZE_W = 224, 224
@@ -119,7 +119,19 @@ def prepare_generator_output(image_dir: str,
     # read object image
     img = img_as_float(io.imread(join(image_dir, obj['image_file'])))
 
-    if add_pos_enc:
+    if add_pos_enc and add_depth_map:
+        # prepare pos enc
+        pos_enc = get_2d_pos_enc(*img.shape)
+        # prepare depth map
+        depth_map_path = pathlib.Path(image_dir).parents[0] / "predict_depth" / f'depth_{obj["image_file"]}'
+        depth_map = img_as_float(io.imread(depth_map_path))
+        depth_map = resize(depth_map, img.shape[:2])
+        depth_map = np.expand_dims(depth_map, -1)
+        # concatenate together 
+        stacked = np.concatenate((img, pos_enc, depth_map), axis=-1)
+        # crop the image
+        img = stacked[ymin:ymax + 1, xmin:xmax + 1]
+    elif add_pos_enc:
         pos_enc = get_2d_pos_enc(*img.shape)
         stacked = np.concatenate((img, pos_enc), axis=-1)
         img = stacked[ymin:ymax + 1, xmin:xmax + 1]
@@ -150,8 +162,8 @@ def prepare_generator_output(image_dir: str,
         if orientation_type == 'multibin':
             if 'multibin_orientation_flipped' not in obj:
                 # Get orientation and confidence values for flip
-                # multibin_orientation_flipped, multibin_confidence_flipped = alpha_to_multibin_orientation_confidence(math.tau - obj["alpha"])
-                multibin_orientation_flipped, multibin_confidence_flipped = radians_to_multibin(math.tau - obj[prediction_target])
+                # multibin_orientation_flipped, multibin_confidence_flipped = radians_to_multibin(math.tau - obj[prediction_target])
+                multibin_orientation_flipped, multibin_confidence_flipped = radians_to_multi_affinity_bin(math.tau - obj[prediction_target])
                 obj['multibin_orientation_flipped'] = multibin_orientation_flipped
                 obj['multibin_confidence_flipped'] = multibin_confidence_flipped
             return img, np.concatenate((obj['multibin_orientation_flipped'], obj['multibin_confidence_flipped']), axis=-1)
@@ -181,8 +193,8 @@ def prepare_generator_output(image_dir: str,
         if orientation_type == 'multibin':
             if 'multibin_orientation' not in obj:
                 # Get orientation and confidence values for flip
-                # multibin_orientation, multibin_confidence = alpha_to_multibin_orientation_confidence(obj["alpha"])
-                multibin_orientation, multibin_confidence = radians_to_multibin(obj[prediction_target])
+                # multibin_orientation, multibin_confidence = radians_to_multibin(obj[prediction_target])
+                multibin_orientation, multibin_confidence = radians_to_multi_affinity_bin(obj[prediction_target])
                 obj['multibin_orientation'] = multibin_orientation
                 obj['multibin_confidence'] = multibin_confidence
             return img, np.concatenate((obj['multibin_orientation'], obj['multibin_confidence']), axis=-1)
@@ -270,13 +282,14 @@ class KittiGenerator(Sequence):
 
         # prepare batch of images
         n_channel = 3 # by defualt 3 channels: RGB
-        if self.add_pos_enc: n_channel = 6 # RGB + posidional encoding
+        if (self.add_depth_map and self.add_pos_enc): n_channel = 7 # RGB + positional encodin + depth map
+        elif self.add_pos_enc: n_channel = 6 # RGB + positional encoding
         elif self.add_depth_map : n_channel = 4 # RGB + depth map
 
         img_batch = np.empty((num_batch_objs, CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
         # prepare batch of orientation_type tensor
         if self.orientation_type == "multibin":
-            orientation_batch = np.empty((num_batch_objs, *SHAPE_MULTIBIN))
+            orientation_batch = np.empty((num_batch_objs, *SHAPE_MULTI_AFFINITY_BIN))
         elif self.orientation_type == 'tricosine':
             orientation_batch = np.empty((num_batch_objs, *SHAPE_TRICOSINE))
         elif self.orientation_type == "alpha" or self.orientation_type == 'rot-y':
