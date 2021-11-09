@@ -222,17 +222,12 @@ def multibin_orientation_confidence_to_radians(orientation, confidence, allow_ne
         # force angles in [0, 2pi] range for average calculation
             # predicted_angles[bin_id] = tf.math.mod(predicted_angle, TAU)
         predicted_angles.append(tf.math.mod(predicted_angle, TAU))
-        # print(f'__debug__ append {tf.math.mod(predicted_angle, TAU)}')
         # get the confidence
         bin_conf = confidence[bin_id, 0]
             # predicted_confs[bin_id] = bin_conf
-        # print(f'__debug__ append angles {tf.math.mod(predicted_angle, TAU)}')
         predicted_confs.append(bin_conf.numpy().item())
     # get the prediction from bin with highest confidence
-    # print(f'__debug__ predicted_angles={predicted_angles}')
-    # print(f'__debug__ confidence={predicted_confs}')
     pred_angle = predicted_angles[tf.math.argmax(predicted_confs).numpy().item()]
-    # print(f'__debug__ selected_angles={pred_angle}')
 
     # convert pred_angle to kitti range
     if allow_negative_pi:
@@ -269,9 +264,11 @@ def alpha_to_rot_y(alpha, loc_x, loc_z):
 
 # single bin and voting bin constants
 SHAPE_SINGLE_BIN = (2,)
-NUM_OF_VOTING_BINS = 4 # minimum is 3
+NUM_OF_MULTI_AFFINITY_BIN = 2
+NUM_OF_VOTING_BINS = 4 # minimum is 3 
 VOTING_BIN_WIDTH = TAU / NUM_OF_VOTING_BINS
 SHAPE_VOTING_BIN = (NUM_OF_VOTING_BINS, 2)
+SHAPE_MULTI_AFFINITY_BIN = (NUM_OF_MULTI_AFFINITY_BIN, 3)
 VOTING_BIN_THRESHOLD = 60.0/360. * TAU
 
 def radians_to_single_bin(angle_rad):
@@ -292,6 +289,23 @@ def radians_to_voting_bin(angle_rad):
     orientation = np.zeros(shape=SHAPE_VOTING_BIN)
 
     for bin_id in range(NUM_OF_VOTING_BINS):
+        # BIN START
+        BIN_START = bin_id * BIN_SIZE
+        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
+        angle_bin_start_offset = new_angle_rad - BIN_CENTER
+        # calculate bin affinity with cos and sin
+        orientation[bin_id] = radians_to_single_bin(angle_bin_start_offset)
+
+    return orientation
+
+def radians_to_multi_affinity_bin(angle_rad):
+    # convert all angles regardless of sign to the range [0-tau)
+    new_angle_rad = angle_rad % TAU
+
+    # placeholder for all output values
+    orientation = np.zeros(shape=SHAPE_MULTI_AFFINITY_BIN)
+
+    for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # BIN START
         BIN_START = bin_id * BIN_SIZE
         BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
@@ -334,3 +348,26 @@ def voting_bin_to_radians(orientation):
     # compute the weighted average
     mean_angle = np.average(good_predicted_angles)
     return mean_angle
+
+def multi_affinity_to_radians(orientation):
+    # clip values between -1 and 1 for acos.
+    orientation = np.clip(orientation, -1.0, 1.0)
+
+    # placeholder for the list of all predictions
+    predicted_angles = np.empty(shape=(NUM_OF_MULTI_AFFINITY_BIN,))
+
+    # get the weighted average of all predictions
+    for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
+        # get the angle
+        angle_bin_center_offset = single_bin_to_radians(orientation[bin_id,:2])
+        predicted_conf = orientation[bin_id, 3]
+        BIN_START = bin_id * BIN_SIZE
+        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
+        predicted_angle = angle_bin_center_offset
+        predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
+
+    # get all confidence and get all predicted angles
+    weighed_average_angle = np.average(predicted_angle, predicted_conf)
+
+    # compute the weighted average
+    return weighed_average_angle

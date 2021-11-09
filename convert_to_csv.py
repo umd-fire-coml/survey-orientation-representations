@@ -6,9 +6,9 @@ import pandas as pd
 import os
 import tensorboard as tb
 
-experiment_id = 'n05xObObQU24MjsM7KnRRQ' # depth: "K1NKDNUYTqK9GaGVtWvnCA"
+experiment_id = 'zgVmzRRNSa2q2smYZClHjQ' # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA"
 csv_file_dir = 'csv_output'
-csv_file_prefix = 'angular_loss'
+csv_file_prefix = 'angular_new'
 
 def clean_data(input_df, csv_name):
     # remove accuracy tag and wall time columns
