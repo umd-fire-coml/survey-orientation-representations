@@ -248,6 +248,7 @@ def batch_multibin_to_batch_radians(batch_multibin):
     # print(f'__debug__ batch_multibin shape: {batch_multibin.shape}')
     return tf.map_fn(multibin_to_radians, batch_multibin)
 
+
 # alpha and rot_y constants
 ALPHA_ROT_Y_NORM_FACTOR = tf.constant(np.pi, dtype=tf.float64)
 SHAPE_ALPHA_ROT_Y = (1,)
@@ -264,11 +265,9 @@ def alpha_to_rot_y(alpha, loc_x, loc_z):
 
 # single bin and voting bin constants
 SHAPE_SINGLE_BIN = (2,)
-NUM_OF_MULTI_AFFINITY_BIN = 2
 NUM_OF_VOTING_BINS = 4 # minimum is 3 
 VOTING_BIN_WIDTH = TAU / NUM_OF_VOTING_BINS
 SHAPE_VOTING_BIN = (NUM_OF_VOTING_BINS, 2)
-SHAPE_MULTI_AFFINITY_BIN = (NUM_OF_MULTI_AFFINITY_BIN, 3)
 VOTING_BIN_THRESHOLD = 60.0/360. * TAU
 
 def radians_to_single_bin(angle_rad):
@@ -289,23 +288,6 @@ def radians_to_voting_bin(angle_rad):
     orientation = np.zeros(shape=SHAPE_VOTING_BIN)
 
     for bin_id in range(NUM_OF_VOTING_BINS):
-        # BIN START
-        BIN_START = bin_id * BIN_SIZE
-        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
-        angle_bin_start_offset = new_angle_rad - BIN_CENTER
-        # calculate bin affinity with cos and sin
-        orientation[bin_id] = radians_to_single_bin(angle_bin_start_offset)
-
-    return orientation
-
-def radians_to_multi_affinity_bin(angle_rad):
-    # convert all angles regardless of sign to the range [0-tau)
-    new_angle_rad = angle_rad % TAU
-
-    # placeholder for all output values
-    orientation = np.zeros(shape=SHAPE_MULTI_AFFINITY_BIN)
-
-    for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # BIN START
         BIN_START = bin_id * BIN_SIZE
         BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
@@ -349,6 +331,28 @@ def voting_bin_to_radians(orientation):
     mean_angle = np.average(good_predicted_angles)
     return mean_angle
 
+# multi affinity bin
+NUM_OF_MULTI_AFFINITY_BIN = 2
+SHAPE_MULTI_AFFINITY_BIN = (NUM_OF_MULTI_AFFINITY_BIN, 3)
+def radians_to_multi_affinity_bin(angle_rad):
+    # convert all angles regardless of sign to the range [0-tau)
+    new_angle_rad = angle_rad % TAU
+
+    # placeholder for all output values
+    orientation = np.zeros(shape=SHAPE_MULTI_AFFINITY_BIN)
+
+    for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
+        # BIN START
+        BIN_START = bin_id * BIN_SIZE
+        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
+        angle_bin_start_offset = new_angle_rad - BIN_CENTER
+        # calculate bin affinity with cos and sin
+        orientation[bin_id][:2] = radians_to_single_bin(angle_bin_start_offset)
+        # get the confidence
+        orientation[bin_id][2] = np.asarray([1.]) / NUM_OF_MULTI_AFFINITY_BIN
+
+    # print(f'return shape:\n {orientation[:,:2].shape}\n{orientation[:,2, np.newaxis].shape}')
+    return orientation[:,:2], orientation[:,2, np.newaxis]
 def multi_affinity_to_radians(orientation):
     # clip values between -1 and 1 for acos.
     orientation = np.clip(orientation, -1.0, 1.0)
@@ -360,14 +364,20 @@ def multi_affinity_to_radians(orientation):
     for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # get the angle
         angle_bin_center_offset = single_bin_to_radians(orientation[bin_id,:2])
-        predicted_conf = orientation[bin_id, 3]
+        predicted_conf = orientation[bin_id, 2]
         BIN_START = bin_id * BIN_SIZE
         BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
         predicted_angle = angle_bin_center_offset
         predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
 
     # get all confidence and get all predicted angles
-    weighed_average_angle = np.average(predicted_angle, predicted_conf)
+    weighed_average_angle = np.average(predicted_angle, weights = predicted_conf)
 
     # compute the weighted average
     return weighed_average_angle
+
+def batch_multi_affinity_to_radians(batch):
+    return tf.map_fn(multi_affinity_to_radians, batch)
+
+def batch_radians_to_multi_affinity_bin(batch):
+    return tf.map_fn(radians_to_multi_affinity_bin, batch)

@@ -28,7 +28,7 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
             return angle_normed_to_radians(tensor)
         elif self.orientation_type == 'multibin':
             # return batch_multibin_to_batch_radians(tensor)
-            return multi_affinity_to_radians(tensor)
+            return batch_multi_affinity_to_radians(tensor)
         else:
             return self.recursively_convert_to_radians(tensor)
 

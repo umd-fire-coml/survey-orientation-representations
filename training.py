@@ -163,7 +163,6 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        # old_time_stamp = "rot-y_rot-y_2021-11-07-01-15-56_1636262156"
         sub_directories = [path for path in weights_directory.iterdir()]
         sub_directories.sort()
         latest_training_dir = sub_directories[-1]
