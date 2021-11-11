@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
 import math
-from orientation_converters import *
-import metrics
-import loss_function
+from model.orientation_converters import *
+import model.metrics
+import model.loss_function as loss_function
 from pprint import pprint
 import matplotlib.pyplot as plt
 import pathlib

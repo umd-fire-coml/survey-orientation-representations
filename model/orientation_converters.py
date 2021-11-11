@@ -357,22 +357,21 @@ def multi_affinity_to_radians(orientation):
     # clip values between -1 and 1 for acos.
     orientation = np.clip(orientation, -1.0, 1.0)
 
-    # placeholder for the list of all predictions
+    # placeholder for the angles and get confidence
     predicted_angles = np.empty(shape=(NUM_OF_MULTI_AFFINITY_BIN,))
-
-    # get the weighted average of all predictions
+    predicted_conf = orientation[:,2]
 
     for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # get the angle
         angle_bin_center_offset = single_bin_to_radians(orientation[bin_id,:2])
-        predicted_conf = orientation[bin_id, 2]
         BIN_START = bin_id * BIN_SIZE
         BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
         predicted_angle = angle_bin_center_offset
         predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
 
-    weighed_average_angle = np.average(predicted_angles, weights = predicted_conf)
-
+    
+    # print(f'shape of predicted angle: {predicted_angles.shape}\n shape of predicted confidence: {predicted_conf.shape}')
+    weighed_average_angle = 0 if sum(predicted_conf)==0 else np.average(predicted_angles, weights = predicted_conf, axis=0)
     '''    # weights sin and cos
     cos_angles, sin_angles = orientation[:,0], orientation[:,1]
     conf = orientation[:,2]
