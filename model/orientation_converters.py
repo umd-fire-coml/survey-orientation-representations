@@ -361,6 +361,7 @@ def multi_affinity_to_radians(orientation):
     predicted_angles = np.empty(shape=(NUM_OF_MULTI_AFFINITY_BIN,))
 
     # get the weighted average of all predictions
+
     for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # get the angle
         angle_bin_center_offset = single_bin_to_radians(orientation[bin_id,:2])
@@ -370,9 +371,16 @@ def multi_affinity_to_radians(orientation):
         predicted_angle = angle_bin_center_offset
         predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
 
-    # get all confidence and get all predicted angles
-    weighed_average_angle = np.average(predicted_angle, weights = predicted_conf)
+    weighed_average_angle = np.average(predicted_angles, weights = predicted_conf)
 
+    '''    # weights sin and cos
+    cos_angles, sin_angles = orientation[:,0], orientation[:,1]
+    conf = orientation[:,2]
+    print('debug: conf shape: {conf.shape}')
+    weighted_cos = np.average(cos_angles, weights=conf)
+    weighted_sin = np.average(sin_angles, weights=conf)
+    predicted_angle = np.arctan2(weighted_sin, weighted_cos)
+    '''
     # compute the weighted average
     return weighed_average_angle
 

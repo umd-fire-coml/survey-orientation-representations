@@ -6,9 +6,9 @@ import pandas as pd
 import os
 import tensorboard as tb
 
-experiment_id = 'zgVmzRRNSa2q2smYZClHjQ' # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA"
+experiment_id = 'rMk1gMTzQCqWvP1ZlZZhgg' #multi affinity  # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA" 'zgVmzRRNSa2q2smYZClHjQ'
 csv_file_dir = 'csv_output'
-csv_file_prefix = 'angular_new'
+csv_file_prefix = 'multi_affinity'
 
 def clean_data(input_df, csv_name):
     # remove accuracy tag and wall time columns

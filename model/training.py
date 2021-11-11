@@ -1,3 +1,4 @@
+from logging import log
 from numpy.core.fromnumeric import sort
 import tensorflow as tf
 from build_model import build_model
@@ -164,22 +165,25 @@ if __name__ == "__main__":
     #     monitor='val_loss', patience=20)
     if RESUME:
         sub_directories = [path for path in weights_directory.iterdir()]
+        if len(sub_directories) == 0:
+            raise Exception('No previous training record found. Please enter correct directory or remore --resume option')
         sub_directories.sort()
         latest_training_dir = sub_directories[-1]
         print('-----------------------------------------------')
         print(f'Resume training from directory: {latest_training_dir}')
-        files = glob.glob(latest_training_dir+"/*")
-        files.sort()
-        latest_files = files[-1]
-        latest_epoch = re.search(r'epoch-(\d\d)-', latest_files).group(1)
-        print(f'The latest file is {latest_files} and its epoch number is {latest_epoch}')
+        weight_files = [str(path) for path in latest_training_dir.iterdir()]
+        weight_files.sort()
+        latest_weight = weight_files[-1]
+        latest_epoch = re.search(r'epoch-(\d\d)-', latest_weight).group(1)
+        print(f'Resume training from epoch number: {latest_epoch}')
         init_epoch = int(latest_epoch)
         if not init_epoch: raise Exception("Fail to match epoch number")
-        if not os.path.isfile(latest_files):raise FileNotFoundError(f'stored weights directory "{latest_files}" is not a valid file')
-        model.load_weights(latest_files)
+        if not os.path.isfile(latest_weight):raise FileNotFoundError(f'stored weights directory "{latest_weight}" is not a valid file')
+        model.load_weights(latest_weight)
         # overwrite tensorboard callback
-        tb_log_dir = logs_directory / latest_training_dir / "logs" / "scalars"
-        if not os.path.isdir(tb_log_dir): raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
+        print(f'current log directory: {logs_directory}')
+        tb_log_dir = logs_directory / latest_training_dir.name / "logs" / "scalars"
+        if not tb_log_dir.is_dir(): raise FileNotFoundError(f'tensorboard log directory "{tb_log_dir}" is not a valid directory')
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
         # overwrite call back directory
         cp_callback_file = weights_directory / latest_training_dir / weight_format
