@@ -1,42 +1,18 @@
 import numpy as np
 import tensorflow as tf
-import math
+import sys, math
+import pathlib
+# print(f'resolved path: {pathlib.Path().resolve()}')
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent))
+
 from model.orientation_converters import *
 import model.metrics
 import model.loss_function as loss_function
 from pprint import pprint
 import matplotlib.pyplot as plt
-import pathlib
+
 import pandas as pd
 
-# angle_list = np.linspace(-math.pi, math.pi, 10).tolist()
-# # voting_bin_list = [angle_to_voting_bin_outputs(angle) for angle in angle_list]
-# # test_angle_list = [voting_bin_outputs_to_angle(voting_bin) for voting_bin in voting_bin_list]
-# offset_list = [(angle_list[i] - test_angle_list[i]) for i in range(len(test_angle_list))]
-#
-# print('''
-# angle_list: {}
-# test_angle_list: {}
-# offset_list: {}
-# '''.format(
-#     angle_list,
-#     test_angle_list,
-#     offset_list
-#     )
-# )
-    # angle_true = np.linspace(-math.pi, math.pi, BATCH_SIZE)
-    # angle_pred = angle_true + (np.pi * 2)
-    # multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in angle_true], dtype=tf.float32)
-    # multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in angle_pred], dtype=tf.float32)
-    # print('multibin_true:', multibin_true)
-    # print('multibin_pred:', multibin_pred)
-    # the_metric = metrics.OrientationAccuracy("multibin")
-
-    # the_metric.update_state(multibin_true, multibin_pred)
-
-    # #print("Ground Truth: ", angle_true)
-    # print("Accuracy: ", the_metric.result())
-    # #print("Offset:", offset)
 def generate_loss_csv(batch_size, ground_truth, visualize = False):
     y_true = np.full(batch_size, ground_truth)
     y_pred = np.linspace(-2*math.pi, 2*math.pi, batch_size)
@@ -88,13 +64,12 @@ if __name__ == "__main__":
     df_list = []
     for gt in [0, 0.5*math.pi, math.pi]:    
         loss_array, y_pred = generate_loss_csv(BATCH_SIZE, gt, True)
-        output_dir = pathlib.Path("loss_function_graph")
+        output_dir = pathlib.Path("../loss_function_graph")
         df = pd.DataFrame(data=loss_array, \
                             index= np.array(y_pred),
                             columns=["Multibin Loss", "Tircosine Loss","SingleBin Loss","VotingBin Loss", "Angular Loss","RotY Loss", "L2 Loss",])
         df_list.append(df)
     all_df = pd.concat(df_list, 1)
     all_df.to_csv(output_dir/"loss_function.csv")
-    print(all_df)
     
 

@@ -101,12 +101,9 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time))
     training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}'
     if ADD_POS_ENC:
-        # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_with_pos_enc_{timestamp}'
         training_stamp += "_with_pos_enc"
     if ADD_DEPTH_MAP:
-        # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_with_depth_map_{timestamp}'
         training_stamp +="_with_depth_map"
-    # training_stamp = f'{PREDICTION_TARGET}_{ORIENTATION}_{timestamp}'
     training_stamp += f"_{timestamp}"
     print(f'training stamp with timestamp:{training_stamp}')
     # format for .h5 weight file
