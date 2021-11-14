@@ -201,13 +201,6 @@ def radians_to_multibin(angle_rad):
 def multibin_orientation_confidence_to_radians(orientation, confidence, allow_negative_pi=True):
     # clip values between -1 and 1 for acos.
     orientation = tf.clip_by_value(orientation, -1.0, 1.0)
-    # print(f"Shape of orientation: {orientation.shape}")
-    # get the start of each bin
-
-    # get the list of all predictions
-    # predicted_angles = tf.zeros(shape=(NUM_BIN,))
-    # predicted_confs = tf.zeros(shape=(NUM_BIN,))
-
     predicted_angles = [] # tensorflow object doesn't support assignment. We have to stack them together
     predicted_confs = []
 
@@ -334,6 +327,7 @@ def voting_bin_to_radians(orientation):
 # multi affinity bin
 NUM_OF_MULTI_AFFINITY_BIN = 2
 SHAPE_MULTI_AFFINITY_BIN = (NUM_OF_MULTI_AFFINITY_BIN, 3)
+MULTI_AFFINITY_BIN_WIDTH = TAU / NUM_OF_MULTI_AFFINITY_BIN
 def radians_to_multi_affinity_bin(angle_rad):
     # convert all angles regardless of sign to the range [0-tau)
     new_angle_rad = angle_rad % TAU
@@ -344,7 +338,7 @@ def radians_to_multi_affinity_bin(angle_rad):
     for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # BIN START
         BIN_START = bin_id * BIN_SIZE
-        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
+        BIN_CENTER = BIN_START + (MULTI_AFFINITY_BIN_WIDTH / 2)
         angle_bin_start_offset = new_angle_rad - BIN_CENTER
         # calculate bin affinity with cos and sin
         orientation[bin_id][:2] = radians_to_single_bin(angle_bin_start_offset)
@@ -352,36 +346,35 @@ def radians_to_multi_affinity_bin(angle_rad):
         orientation[bin_id][2] = np.asarray([1.]) / NUM_OF_MULTI_AFFINITY_BIN
 
     # print(f'return shape:\n {orientation[:,:2].shape}\n{orientation[:,2, np.newaxis].shape}')
-    return orientation[:,:2], orientation[:,2, np.newaxis]
+    return orientation[:, :2], orientation[:, 2, np.newaxis]
+
 def multi_affinity_to_radians(orientation):
-    # clip values between -1 and 1 for acos.
-    orientation = np.clip(orientation, -1.0, 1.0)
 
-    # placeholder for the angles and get confidence
-    predicted_angles = np.empty(shape=(NUM_OF_MULTI_AFFINITY_BIN,))
-    predicted_conf = orientation[:,2]
+    # get the angles and get confidence
+    predicted_angles_without_offset = orientation[:,:2]
+    predicted_confs = orientation[:,2]
 
+    # offset each predicted angle by bin center
+    predicted_angles = np.empty(predicted_angles_without_offset.shape)
     for bin_id in range(NUM_OF_MULTI_AFFINITY_BIN):
         # get the angle
-        angle_bin_center_offset = single_bin_to_radians(orientation[bin_id,:2])
+        # angle_bin_center_offset = single_bin_to_radians(orientation[bin_id,:2])
         BIN_START = bin_id * BIN_SIZE
-        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
-        predicted_angle = angle_bin_center_offset
-        predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
+        BIN_CENTER = BIN_START + (MULTI_AFFINITY_BIN_WIDTH / 2)
+        BIN_CENTER_COORD = radians_to_single_bin(BIN_CENTER)
+        predicted_angles[bin_id] = predicted_angles_without_offset[bin_id] + BIN_CENTER_COORD
 
-    
-    # print(f'shape of predicted angle: {predicted_angles.shape}\n shape of predicted confidence: {predicted_conf.shape}')
-    weighed_average_angle = 0 if sum(predicted_conf)==0 else np.average(predicted_angles, weights = predicted_conf, axis=0)
-    '''    # weights sin and cos
-    cos_angles, sin_angles = orientation[:,0], orientation[:,1]
-    conf = orientation[:,2]
-    print('debug: conf shape: {conf.shape}')
-    weighted_cos = np.average(cos_angles, weights=conf)
-    weighted_sin = np.average(sin_angles, weights=conf)
+    # compute the weighted average sin and cos
+    cos_angles, sin_angles = predicted_angles[:,0], predicted_angles[:,1]
+    weighted_cos = np.average(cos_angles, weights=predicted_confs)
+    weighted_sin = np.average(sin_angles, weights=predicted_confs)
+    # scale values between -1 and 1 for acos.
+    scale_factor = np.max(np.concatenate([cos_angles,sin_angles]))
+    weighted_cos, weighted_sin = weighted_cos/scale_factor, weighted_sin/scale_factor
+    # get predicted_angle
     predicted_angle = np.arctan2(weighted_sin, weighted_cos)
-    '''
-    # compute the weighted average
-    return weighed_average_angle
+    
+    return predicted_angle
 
 def batch_multi_affinity_to_radians(batch):
     return tf.map_fn(multi_affinity_to_radians, batch)

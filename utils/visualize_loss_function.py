@@ -19,10 +19,10 @@ def generate_loss_csv(batch_size, ground_truth, visualize = False):
     output_batch = np.zeros((7, batch_size))
     # ===== multibin =====
     multibin_scaling_factor = 0.5
-    multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_true], dtype=tf.float32)
-    multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_pred], dtype=tf.float32)
-    # multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_true], dtype=tf.float32)
-    # multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_pred], dtype=tf.float32)
+    # multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_true], dtype=tf.float32)
+    # multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_pred], dtype=tf.float32)
+    multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_true], dtype=tf.float32)
+    multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_pred], dtype=tf.float32)
     multibin_losses = multibin_scaling_factor*loss_function.__loss_multibin(multibin_true, multibin_pred)
     output_batch[0,:] = multibin_losses
     # ===== tricosin =====
@@ -37,19 +37,23 @@ def generate_loss_csv(batch_size, ground_truth, visualize = False):
     output_batch[2,:] = singlebin_losses
     # ===== voting bin =====
     votingbin_true = tf.convert_to_tensor([np.concatenate(radians_to_voting_bin(angle), -1) for angle in y_true], dtype=tf.float32)
-    votingbin_pred = tf.convert_to_tensor([np.concatenate(radians_to_voting_bin(angle), -1) for angle in y_true], dtype=tf.float32)
+    votingbin_pred = tf.convert_to_tensor([np.concatenate(radians_to_voting_bin(angle), -1) for angle in y_pred], dtype=tf.float32)
     votingbin_losses =  loss_function.__loss_voting_bin(votingbin_true, votingbin_pred)
     output_batch[3,:] = votingbin_losses
     # ====== angular and roty loss ======
-    angular_loss_scaling_factor = 50
+    angular_loss_scaling_factor = 1
     roty_true =tf.convert_to_tensor([angle for angle in y_true], dtype=tf.float32)
     roty_pred =tf.convert_to_tensor([angle for angle in y_pred], dtype=tf.float32)
     angular_losses = angular_loss_scaling_factor * loss_function.__loss_alpha_rot_y_angular(roty_true, roty_pred)
+    rot_y_scaling_factor = 1/20
     output_batch[4,:] = angular_losses
-    roty_losses = loss_function.__loss_alpha_rot_y_l2(roty_true, roty_pred)
-    output_batch[5,:] = roty_losses
+    roty_losses = loss_function.__loss_alpha_rot_y_l2(roty_true[:, np.newaxis], roty_pred[:, np.newaxis])
+    output_batch[5,:] = rot_y_scaling_factor* roty_losses
     # ====== l2 loss ======
-    l2_loss = loss_function.l2_loss(y_true, y_pred)
+    l2_scaling_factor = 1/20
+    l2_true = y_true[:, np.newaxis]
+    l2_pred = y_pred[:,np.newaxis]
+    l2_loss = l2_scaling_factor*loss_function.l2_loss(l2_true, l2_pred)
     output_batch[6,:] = l2_loss
     if visualize:
         plt.figure()
@@ -63,7 +67,7 @@ if __name__ == "__main__":
     BATCH_SIZE = 900
     df_list = []
     for gt in [0, 0.5*math.pi, math.pi]:    
-        loss_array, y_pred = generate_loss_csv(BATCH_SIZE, gt, True)
+        loss_array, y_pred = generate_loss_csv(BATCH_SIZE, gt)
         output_dir = pathlib.Path("../loss_function_graph")
         df = pd.DataFrame(data=loss_array, \
                             index= np.array(y_pred),

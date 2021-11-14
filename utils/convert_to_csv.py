@@ -5,8 +5,8 @@
 import pandas as pd
 import os
 import tensorboard as tb
-
-experiment_id = 'rMk1gMTzQCqWvP1ZlZZhgg' #multi affinity  # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA" 'zgVmzRRNSa2q2smYZClHjQ'
+import pathlib
+experiment_id = 'givzVC2BSgO6zLwIeepdhg' #multi affinity  # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA" 'zgVmzRRNSa2q2smYZClHjQ'
 csv_file_dir = 'csv_output'
 csv_file_prefix = 'multi_affinity'
 
@@ -17,7 +17,8 @@ def clean_data(input_df, csv_name):
     input_df['run'] = input_df['run'].str.extract(r'(\D*)_\d\d\d\d')
     cleaned_df= pd.pivot_table(input_df, values = 'value', index = 'step', columns= 'run')
     # export to csv
-    cleaned_df.to_csv(os.path.join(csv_file_dir, csv_file_prefix+"_"+csv_name), index=True)
+    output_dir = pathlib.Path(csv_file_dir)
+    cleaned_df.to_csv(output_dir / f'{csv_file_prefix}_{csv_name}', index=True)
     print("Finish Exporting ", csv_name)
 
 if __name__ == '__main__':

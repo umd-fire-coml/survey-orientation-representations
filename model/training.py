@@ -8,7 +8,6 @@ import data_processing as dp
 import os, re, argparse, time, glob
 from datetime import datetime
 import pathlib
-
 import tensorflow as tf
 
 # set up tensorflow GPU

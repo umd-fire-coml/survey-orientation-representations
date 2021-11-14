@@ -1,6 +1,7 @@
 import tensorflow as tf
-from orientation_converters import SHAPE_TRICOSINE, SHAPE_SINGLE_BIN, SHAPE_VOTING_BIN
 from orientation_converters import *
+from orientation_converters import SHAPE_TRICOSINE, SHAPE_SINGLE_BIN, SHAPE_VOTING_BIN
+
 
 TF_TYPE = tf.dtypes.float32
 

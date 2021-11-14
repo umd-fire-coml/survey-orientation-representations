@@ -1,9 +1,8 @@
-from pandas.tseries.offsets import YearBegin
 import tensorflow as tf
 from orientation_converters import multibin_to_radians, angle_normed_to_radians
 from add_output_layers import LAYER_OUTPUT_NAME_SINGLE_BIN, LAYER_OUTPUT_NAME_TRICOSINE, LAYER_OUTPUT_NAME_ALPHA_ROT_Y, LAYER_OUTPUT_NAME_MULTIBIN, LAYER_OUTPUT_NAME_VOTING_BIN
 from tensorflow.keras.losses import mean_squared_error as l2_loss
-
+import numpy as np
 
 def __loss_tricosine(y_true, y_pred):
     return l2_loss(y_true, y_pred)
@@ -46,17 +45,18 @@ def __loss_alpha_rot_y_angular(y_true, y_pred):
 loss_alpha_rot_y_angular = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y:__loss_alpha_rot_y_angular_normed}
 loss_alpha_rot_y_angular_weights = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: 1.0}
 
-def __loss_multibin(y_true, y_pred):
+def __loss_multi_affinity(y_true, y_pred):
     #loss_conf = tf.reduce_sum(l2_loss(y_true[..., 2:], y_pred[..., 2:]), 1)
-    loss_conf = l2_loss(y_true[..., 2], y_pred[..., 2])
-    #loss_conf = tf.reduce_max(loss_conf, 1)
-    # 
-    loss_orientation = l2_loss(y_true[..., 0], y_pred[..., 0]) + l2_loss(y_true[..., 1] , y_pred[..., 1])
-    # return tf.reduce_sum(loss_conf,1) + loss_orientation
-    return loss_conf + loss_orientation
+    predicted_confs = y_pred[..., 2] #shape (batch size, num bin)
+    cos_angles, sin_angles = y_pred[...,0], y_pred[...,1]
+    weighted_average_angle_cos = tf.reduce_sum(tf.math.multiply(cos_angles, predicted_confs), axis = 1)
+    weighted_average_angle_sin = tf.reduce_sum(tf.math.multiply(sin_angles, predicted_confs), axis = 1)
+    y_pred = tf.transpose(tf.convert_to_tensor([[weighted_average_angle_cos,weighted_average_angle_sin],[weighted_average_angle_cos,weighted_average_angle_sin]], tf.float32))
+    loss_orientation = l2_loss(y_true[..., :2], y_pred)
+    return loss_orientation
 
 
-loss_multibin = {LAYER_OUTPUT_NAME_MULTIBIN: __loss_multibin}
+loss_multibin = {LAYER_OUTPUT_NAME_MULTIBIN: __loss_multi_affinity}
 loss_multibin_weights = {LAYER_OUTPUT_NAME_MULTIBIN: 1.0}
 
 
