@@ -26,8 +26,6 @@ def __loss_alpha_rot_y_angular_normed(y_true, y_pred):
     # perform dot product
     dot_producted = tf.reduce_sum(tf.multiply(y_true_vector, y_pred_vector), 1)
     loss = dot_producted / (tf.norm(y_true_vector, axis=1)*tf.norm(y_pred_vector, axis=1))
-    # print(f'y_true_vector: {y_true_vector.numpy()}')
-    # print(f'norm of GT:{tf.norm(y_true_vector, axis=1).numpy()}')
     return 1-loss
 
 def __loss_alpha_rot_y_angular(y_true, y_pred):
@@ -38,21 +36,26 @@ def __loss_alpha_rot_y_angular(y_true, y_pred):
     # perform dot product
     dot_producted = tf.reduce_sum(tf.multiply(y_true_vector, y_pred_vector), 1)
     loss = dot_producted / (tf.norm(y_true_vector, axis=1)*tf.norm(y_pred_vector, axis=1))
-    # print(f'y_true_vector: {y_true_vector.numpy()}')
-    # print(f'norm of GT:{tf.norm(y_true_vector, axis=1).numpy()}')
     return 1-loss
 
 loss_alpha_rot_y_angular = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y:__loss_alpha_rot_y_angular_normed}
 loss_alpha_rot_y_angular_weights = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: 1.0}
 
-def __loss_multi_affinity(y_true, y_pred):
-    #loss_conf = tf.reduce_sum(l2_loss(y_true[..., 2:], y_pred[..., 2:]), 1)
-    predicted_confs = y_pred[..., 2] #shape (batch size, num bin)
-    cos_angles, sin_angles = y_pred[...,0], y_pred[...,1]
+# this is a helper function for loss function of multi_affinity
+
+def calcualte_weighted_angle(orien_conf):
+    predicted_confs = orien_conf[..., 2] #shape (batch size, num bin)
+    cos_angles, sin_angles = orien_conf[...,0], orien_conf[...,1]
     weighted_average_angle_cos = tf.reduce_sum(tf.math.multiply(cos_angles, predicted_confs), axis = 1)
     weighted_average_angle_sin = tf.reduce_sum(tf.math.multiply(sin_angles, predicted_confs), axis = 1)
-    y_pred = tf.transpose(tf.convert_to_tensor([[weighted_average_angle_cos,weighted_average_angle_sin],[weighted_average_angle_cos,weighted_average_angle_sin]], tf.float32))
-    loss_orientation = l2_loss(y_true[..., :2], y_pred)
+    predicted_angle = tf.math.atan2(weighted_average_angle_sin, weighted_average_angle_cos)
+    return predicted_angle
+
+def __loss_multi_affinity(y_true, y_pred):
+    # loss_conf = l2_loss(y_true[..., 2], y_pred[..., 2])
+    # loss_orientation = l2_loss(y_true[..., 0], y_pred[..., 0]) + l2_loss(y_true[..., 1] , y_pred[..., 1])
+    # return loss_conf + loss_orientation
+    loss_orientation = l2_loss(calcualte_weighted_angle(y_true), calcualte_weighted_angle(y_pred))
     return loss_orientation
 
 
