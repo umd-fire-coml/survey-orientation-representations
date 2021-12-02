@@ -163,7 +163,7 @@ def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
         return mean_angle % TAU
 
 # multibin constants
-NUM_BIN = int(2)
+NUM_BIN = int(4)
 OVERLAP = 0.1
 BIN_SIZE = TAU / NUM_BIN  # angle size of each bin, i.e. 180 deg
 BIN_EXT = (OVERLAP / 2) * BIN_SIZE # extension at start and end

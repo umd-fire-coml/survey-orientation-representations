@@ -54,8 +54,10 @@ parser.add_argument('--weight_dir', dest='weight_dir', type=str,
                     help='Relative path to save weights. Default path is training_record/weights')
 parser.add_argument('--val_split', dest='val_split', type=float, default=0.2,
                     help='Fraction of the dataset used for validation. Default val_split is 0.2')
-parser.add_argument('--resume', dest='resume', type=bool, default=False)
-parser.add_argument('--add_pos_enc', dest='add_pos_enc', type=bool, default=False)
+parser.add_argument('--resume', dest='resume', type=bool, default=False,
+                    help='Resume from previous training under training_record directory')
+parser.add_argument('--add_pos_enc', dest='add_pos_enc', type=bool, default=False,
+                    help='Add positional encoding to input')
 parser.add_argument("--use_angular_loss", dest='use_angular_loss', type=bool, default= False)
 parser.add_argument("--add_depth_map", dest="add_depth_map", type=bool, default=False,
                     help="If add_depth_map is true, add the path to directory containing depth map.")

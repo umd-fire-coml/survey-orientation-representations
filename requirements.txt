@@ -1,5 +1,0 @@
-## version doesnt matter
-tqdm
-opencv-python
-
-tensorflow-gpu ~= 2.3.0

@@ -6,9 +6,9 @@ import pandas as pd
 import os
 import tensorboard as tb
 import pathlib
-experiment_id = 'givzVC2BSgO6zLwIeepdhg' #multi affinity  # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA" 'zgVmzRRNSa2q2smYZClHjQ'
+experiment_id = 'iJvlXxzgRFKSZwQT5JefxA' # multi 2 bins'Goh3jdHwQpedTjWqAxsgoQ' #multi affinity  # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA" 'zgVmzRRNSa2q2smYZClHjQ'
 csv_file_dir = 'csv_output'
-csv_file_prefix = 'multi_affinity'
+csv_file_prefix = 'multi_4_bin'
 
 def clean_data(input_df, csv_name):
     # remove accuracy tag and wall time columns

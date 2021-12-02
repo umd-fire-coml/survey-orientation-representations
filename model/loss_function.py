@@ -41,22 +41,11 @@ def __loss_alpha_rot_y_angular(y_true, y_pred):
 loss_alpha_rot_y_angular = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y:__loss_alpha_rot_y_angular_normed}
 loss_alpha_rot_y_angular_weights = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: 1.0}
 
-# this is a helper function for loss function of multi_affinity
-
-def calcualte_weighted_angle(orien_conf):
-    predicted_confs = orien_conf[..., 2] #shape (batch size, num bin)
-    cos_angles, sin_angles = orien_conf[...,0], orien_conf[...,1]
-    weighted_average_angle_cos = tf.reduce_sum(tf.math.multiply(cos_angles, predicted_confs), axis = 1)
-    weighted_average_angle_sin = tf.reduce_sum(tf.math.multiply(sin_angles, predicted_confs), axis = 1)
-    predicted_angle = tf.math.atan2(weighted_average_angle_sin, weighted_average_angle_cos)
-    return predicted_angle
-
 def __loss_multi_affinity(y_true, y_pred):
-    # loss_conf = l2_loss(y_true[..., 2], y_pred[..., 2])
-    # loss_orientation = l2_loss(y_true[..., 0], y_pred[..., 0]) + l2_loss(y_true[..., 1] , y_pred[..., 1])
-    # return loss_conf + loss_orientation
-    loss_orientation = l2_loss(calcualte_weighted_angle(y_true), calcualte_weighted_angle(y_pred))
-    return loss_orientation
+    loss_conf = l2_loss(y_true[..., 2], y_pred[..., 2])
+    loss_orientation = l2_loss(y_true[..., 0], y_pred[..., 0]) + l2_loss(y_true[..., 1] , y_pred[..., 1])
+    return loss_conf + loss_orientation 
+    # return l2_loss(y_true, y_pred)
 
 
 loss_multibin = {LAYER_OUTPUT_NAME_MULTIBIN: __loss_multi_affinity}
