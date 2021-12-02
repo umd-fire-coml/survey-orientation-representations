@@ -2,11 +2,12 @@
 ## Raymond H. Tu, Siyuan Peng, Valdimir Leung, Richard Gao, Jerry Lan
 This is the official implementation for the paper [A survey of Orientation Representations for Accuracte Deep Rotation](www.google.com)
 
-### Table of Conents
-- [Environment Setup](### Envrionment Setup)
+## Table of Conents
+- [Environment Setup](#Envrionment-Setup)
 - [Training](#Training)
+- [Training Result](#Training-Result)
 
-### Envrionment Setup
+## Envrionment Setup
 ``` bash
 # create conda environment based on yml file
 conda env update --file environment.yml
@@ -17,10 +18,10 @@ Clone git repo:
 ``` bash
 git clone git@github.com:umd-fire-coml/KITTI-orientation-learning.git
 ```
-### Training
+## Training
 Check training.sh for example training script
 
-#### Training Parameter setup:
+### Training Parameter setup:
 Training parameters can be config using cmd arguments
 - --predict: Specify prediction target. Options are rot-y, alpha
 - --converter:  Specify prediction method. Options are alpha, rot-y, tricosine, multibin, voting-bin, single-bin
@@ -34,3 +35,20 @@ For all the training parameter setup, please using
 ```
 python3 model/training.py -h
 ```
+
+## Training Result
+| Exp ID | Target                  | Loss Functions | Additional Inputs | Accuracy  (\%) |
+|--------|-------------------------|----------------|-------------------|----------------|
+| E1     | rot-y                   | L2 Loss        | -                 | 90.490         |
+| E2     | rot-y                   | Angle Loss     | -                 | 89.052         |
+| E3     | alpha                   | L2 Loss        | -                 | 90.132         |
+| E4     | Single Bin              | L2 Loss        | -                 | 94.815         |
+| E5     | Single Bin              | L2 Loss        | Pos Enc           | 94.277         |
+| E6     | Single Bin              | L2 Loss        | Dep Map           | 93.952         |
+| E7     | Voting Bins (4-Bin)     | L2 Loss        | -                 | 93.609         |
+| E8     | Tricosine               | L2 Loss        | -                 | 94.249         |
+| E9     | Tricosine               | L2 Loss        | Pos Enc           | 94.351         |
+| E10    | Tricosine               | L2 Loss        | Dep Map           | 94.384         |
+| E11    | Confidence Bins (2-Bin) | L2(Bins,Confs) | -                 | 83.304         |
+| E12    | Confidence Bins (4-Bin) | L2(Bins,Confs) | -                 | 88.071         |
+
