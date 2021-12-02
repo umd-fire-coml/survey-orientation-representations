@@ -22,7 +22,7 @@ git clone git@github.com:umd-fire-coml/KITTI-orientation-learning.git
 Check training.sh for example training script
 
 ### Training Parameter setup:
-Training parameters can be config using cmd arguments
+Training parameters can be configured using cmd arguments
 - --predict: Specify prediction target. Options are rot-y, alpha
 - --converter:  Specify prediction method. Options are alpha, rot-y, tricosine, multibin, voting-bin, single-bin
 - --kitti_dir: path to kitti dataset directory. Its subdirectory should have training/ and testing/ Default path is dataset/
