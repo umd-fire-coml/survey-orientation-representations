@@ -8,6 +8,7 @@ This is the official implementation for the paper [A survey of Orientation Repre
 - [Training Result](#Training-Result)
 
 ## Envrionment Setup
+Install required packages via conda
 ``` bash
 # create conda environment based on yml file
 conda env update --file environment.yml
