@@ -3,21 +3,27 @@ import zipfile
 import tensorflow as tf
 
 dataset_urls = {
-    "training/image_2": "https://s3.eu-central-1.amazonaws.com/avg-kitti/data_object_image_2.zip",
-    "training/label_2": "https://s3.eu-central-1.amazonaws.com/avg-kitti/data_object_label_2.zip"
+    "training/image_2": (
+        "https://s3.eu-central-1.amazonaws.com/avg-kitti/data_object_image_2.zip"
+    ),
+    "training/label_2": (
+        "https://s3.eu-central-1.amazonaws.com/avg-kitti/data_object_label_2.zip"
+    ),
 }
 
-parser = argparse.ArgumentParser(description = 'KITTI Dataset Checker')
-parser.add_argument('-f', '--datasetfolder', type = str, help = 'Root Data folder to Check for', default='dataset')
+parser = argparse.ArgumentParser(description='KITTI Dataset Checker')
+parser.add_argument(
+    '-f', '--datasetfolder', type=str, help='Root Data folder to Check for', default='dataset'
+)
 args = parser.parse_args()
 
 for dataset in dataset_urls.keys():
     dataset_path = os.path.abspath(os.path.join(args.datasetfolder, dataset))
-    if (os.path.exists(dataset_path) and os.listdir(dataset_path)):
+    if os.path.exists(dataset_path) and os.listdir(dataset_path):
         print(dataset_path, "exists.")
     else:
         print(dataset_path, "does not exist.")
-        if (not os.path.exists(args.datasetfolder)):
+        if not os.path.exists(args.datasetfolder):
             os.makedirs(args.datasetfolder)
         url = dataset_urls[dataset]
         print("Downloading dataset to", args.datasetfolder)

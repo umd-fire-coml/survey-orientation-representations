@@ -6,7 +6,7 @@ import math
 '''All methods here assume a single element of input, not a numpy array of inputs'''
 
 # global constants
-TAU = np.pi * 2.
+TAU = np.pi * 2.0
 
 # global helper methods
 def is_angle_between(angle, start, end):
@@ -15,6 +15,7 @@ def is_angle_between(angle, start, end):
     offset_from_end = (end - angle) % TAU
     return offset_from_start < wedge and offset_from_end < wedge
 
+
 def get_mean_angle(batch_radians):
     # calculuate the mean of angles, output between [-pi, pi]
     arr_angles = np.asarray(batch_radians)
@@ -22,15 +23,17 @@ def get_mean_angle(batch_radians):
     sum_cos_predicted_angles = np.sum(np.cos(arr_angles))
     return np.arctan2(sum_sin_predicted_angles, sum_cos_predicted_angles)
 
+
 # trisector affinity constants
 SECTORS = int(3)
 SECTOR_WIDTH = TAU / SECTORS
 HALF_SECTOR_WIDTH = SECTOR_WIDTH / 2
-SHAPE_TRICOSINE = (SECTORS, )
+SHAPE_TRICOSINE = (SECTORS,)
+
 
 def radians_to_tricosine(angle_rad):
     """Return a numpy array of trisector affinity values from an angle (such as alpha or rot_y) in radians
-    
+
     Key Properties:
     - output represent the affinity value (cos distance) to the middle of 3 sectors
     - affinity increases if an angle moves towards the middle of each sector
@@ -42,7 +45,7 @@ def radians_to_tricosine(angle_rad):
 
     # convert all angles regardless of sign to the range [0-tau)
     new_angle_rad = angle_rad % TAU
-    
+
     # output array
     trisector_affinity = np.empty(shape=SHAPE_TRICOSINE)
 
@@ -78,7 +81,7 @@ def radians_to_tricosine(angle_rad):
 
     # calculate the right sector affinity
     # get the right sector num, simply plus 1 then wrap
-    right_sector_num = (bounding_sector_num + 1) % SECTORS # if 3 we get 0
+    right_sector_num = (bounding_sector_num + 1) % SECTORS  # if 3 we get 0
     # get the right sector's start position
     right_sector_start = SECTOR_WIDTH * right_sector_num
     # get the right sector's mid position
@@ -94,9 +97,9 @@ def radians_to_tricosine(angle_rad):
 
     return trisector_affinity
 
+
 def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
-    """Return an angle in radians from trisector affinity, allow_negative_pi sets the output range [-pi to +pi]
-    """
+    """Return an angle in radians from trisector affinity, allow_negative_pi sets the output range [-pi to +pi]"""
 
     # clip values between -1 and 1 for acos.
     trisector_affinity = np.clip(trisector_affinity, -1.0, 1.0)
@@ -129,11 +132,13 @@ def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
     offset_from_left_sector_mid = np.arccos(left_sector_affinity)
     # get the predicted angle based on offset_from_left_sector_mid then wrap, if tau+1 then 1
     # left sector will always offset towards the right
-    predicted_angle_from_left_sector_offset = (left_sector_mid + offset_from_left_sector_mid) % TAU
+    predicted_angle_from_left_sector_offset = (
+        left_sector_mid + offset_from_left_sector_mid
+    ) % TAU
 
     # calculate the possible angle based on left sector offset
     # get the right sector num, simply plus 1 then wrap
-    right_sector_num = (bounding_sector_num + 1) % SECTORS # if 3 we get 0
+    right_sector_num = (bounding_sector_num + 1) % SECTORS  # if 3 we get 0
     # get the right sector's start position
     right_sector_start = SECTOR_WIDTH * right_sector_num
     # get the right sector's mid position
@@ -144,7 +149,9 @@ def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
     offset_from_right_sector_mid = np.arccos(right_sector_affinity)
     # get the predicted angle based on offset_from_right_sector_mid then wrap, if -1 then tau-1
     # left sector will always offset towards the right
-    predicted_angle_from_right_sector_offset = (right_sector_mid - offset_from_right_sector_mid) % TAU
+    predicted_angle_from_right_sector_offset = (
+        right_sector_mid - offset_from_right_sector_mid
+    ) % TAU
 
     # get the predicted angle from bounding sector (based on left right offset signals)
     if offset_from_left_sector_mid < offset_from_right_sector_mid:
@@ -153,23 +160,29 @@ def tricosine_to_radians(trisector_affinity, allow_negative_pi=True):
         predicted_angle_from_bounding_sector_offset = r_angle_from_bounding_sector_offset
 
     # calculuate the mean of predicted angles
-    mean_angle = get_mean_angle([predicted_angle_from_left_sector_offset, 
-                        predicted_angle_from_right_sector_offset, 
-                        predicted_angle_from_bounding_sector_offset])
+    mean_angle = get_mean_angle(
+        [
+            predicted_angle_from_left_sector_offset,
+            predicted_angle_from_right_sector_offset,
+            predicted_angle_from_bounding_sector_offset,
+        ]
+    )
 
     if allow_negative_pi:
         return mean_angle
     else:
         return mean_angle % TAU
 
+
 # multibin constants
 NUM_BIN = int(4)
 OVERLAP = 0.1
 BIN_SIZE = TAU / NUM_BIN  # angle size of each bin, i.e. 180 deg
-BIN_EXT = (OVERLAP / 2) * BIN_SIZE # extension at start and end
+BIN_EXT = (OVERLAP / 2) * BIN_SIZE  # extension at start and end
 ORIENTATION_SHAPE = (NUM_BIN, 2)
 CONFIDENCE_SHAPE = (NUM_BIN, 1)
 SHAPE_MULTIBIN = (NUM_BIN, 3)
+
 
 def radians_to_multibin(angle_rad):
     # convert all angles regardless of sign to the range [0-tau)
@@ -186,9 +199,11 @@ def radians_to_multibin(angle_rad):
         if is_angle_between(new_angle_rad, BIN_START, BIN_END):
             angle_bin_start_offset = new_angle_rad - BIN_START
             # calculate bin affinity with cos and sin
-            orientation[bin_id] = np.asarray([np.cos(angle_bin_start_offset), np.sin(angle_bin_start_offset)])
+            orientation[bin_id] = np.asarray(
+                [np.cos(angle_bin_start_offset), np.sin(angle_bin_start_offset)]
+            )
             # set bin confidence to 1
-            confidence[bin_id] = np.asarray([1.])
+            confidence[bin_id] = np.asarray([1.0])
 
     # if in both sectors, then each confidence is 1/2, this makes sure sum of confidence adds up to 1
     # handle 0 division:
@@ -198,10 +213,15 @@ def radians_to_multibin(angle_rad):
 
     return orientation, confidence
 
-def multibin_orientation_confidence_to_radians(orientation, confidence, allow_negative_pi=True):
+
+def multibin_orientation_confidence_to_radians(
+    orientation, confidence, allow_negative_pi=True
+):
     # clip values between -1 and 1 for acos.
     orientation = tf.clip_by_value(orientation, -1.0, 1.0)
-    predicted_angles = [] # tensorflow object doesn't support assignment. We have to stack them together
+    predicted_angles = (
+        []
+    )  # tensorflow object doesn't support assignment. We have to stack them together
     predicted_confs = []
 
     # get predictions and conf from each bin
@@ -213,11 +233,11 @@ def multibin_orientation_confidence_to_radians(orientation, confidence, allow_ne
         BIN_START = bin_id * BIN_SIZE - BIN_EXT
         predicted_angle = angle_bin_start_offset + BIN_START
         # force angles in [0, 2pi] range for average calculation
-            # predicted_angles[bin_id] = tf.math.mod(predicted_angle, TAU)
+        # predicted_angles[bin_id] = tf.math.mod(predicted_angle, TAU)
         predicted_angles.append(tf.math.mod(predicted_angle, TAU))
         # get the confidence
         bin_conf = confidence[bin_id, 0]
-            # predicted_confs[bin_id] = bin_conf
+        # predicted_confs[bin_id] = bin_conf
         predicted_confs.append(bin_conf.numpy().item())
     # get the prediction from bin with highest confidence
     pred_angle = predicted_angles[tf.math.argmax(predicted_confs).numpy().item()]
@@ -225,7 +245,7 @@ def multibin_orientation_confidence_to_radians(orientation, confidence, allow_ne
     # convert pred_angle to kitti range
     if allow_negative_pi:
         # print(f'type of pred_angle: {type(pred_angle)}')
-        pred_angle = tf.map_fn(lambda x: x if x < math.pi else x-TAU, pred_angle)
+        pred_angle = tf.map_fn(lambda x: x if x < math.pi else x - TAU, pred_angle)
         # return pred_angle if (pred_angle < math.pi) else pred_angle - TAU
         # pred_angle = pred_angle if pred_angle < math.pi else pred_angle - math.pi
         return pred_angle
@@ -233,9 +253,11 @@ def multibin_orientation_confidence_to_radians(orientation, confidence, allow_ne
     else:
         return pred_angle
 
+
 def multibin_to_radians(multibin):
     # print(f'__debug__ multibin shape: {multibin.shape}')
     return multibin_orientation_confidence_to_radians(multibin[..., :2], multibin[..., 2:])
+
 
 def batch_multibin_to_batch_radians(batch_multibin):
     # print(f'__debug__ batch_multibin shape: {batch_multibin.shape}')
@@ -246,25 +268,31 @@ def batch_multibin_to_batch_radians(batch_multibin):
 ALPHA_ROT_Y_NORM_FACTOR = tf.constant(np.pi, dtype=tf.float64)
 SHAPE_ALPHA_ROT_Y = (1,)
 
+
 def radians_to_angle_normed(angle_rad):
     '''normalize angle_rad [-pi, pi] to [-1,1]'''
     return angle_rad / ALPHA_ROT_Y_NORM_FACTOR
 
+
 def angle_normed_to_radians(angle_normed):
-    return  ALPHA_ROT_Y_NORM_FACTOR * tf.cast(angle_normed, dtype= tf.float64)
+    return ALPHA_ROT_Y_NORM_FACTOR * tf.cast(angle_normed, dtype=tf.float64)
+
 
 def alpha_to_rot_y(alpha, loc_x, loc_z):
-    return alpha + np.arctan(loc_x/loc_z)
+    return alpha + np.arctan(loc_x / loc_z)
+
 
 # single bin and voting bin constants
 SHAPE_SINGLE_BIN = (2,)
-NUM_OF_VOTING_BINS = 4 # minimum is 3 
+NUM_OF_VOTING_BINS = 4  # minimum is 3
 VOTING_BIN_WIDTH = TAU / NUM_OF_VOTING_BINS
 SHAPE_VOTING_BIN = (NUM_OF_VOTING_BINS, 2)
-VOTING_BIN_THRESHOLD = 60.0/360. * TAU
+VOTING_BIN_THRESHOLD = 60.0 / 360.0 * TAU
+
 
 def radians_to_single_bin(angle_rad):
     return np.asarray([np.cos(angle_rad), np.sin(angle_rad)])
+
 
 def single_bin_to_radians(orientation, allow_negative_pi=True):
     angle = np.arctan2(orientation[1], orientation[0])
@@ -272,6 +300,7 @@ def single_bin_to_radians(orientation, allow_negative_pi=True):
         return angle
     else:
         return angle % TAU
+
 
 def radians_to_voting_bin(angle_rad):
     # convert all angles regardless of sign to the range [0-tau)
@@ -289,6 +318,7 @@ def radians_to_voting_bin(angle_rad):
         orientation[bin_id] = radians_to_single_bin(angle_bin_start_offset)
 
     return orientation
+
 
 def voting_bin_to_radians(orientation):
     # clip values between -1 and 1 for acos.
@@ -312,11 +342,18 @@ def voting_bin_to_radians(orientation):
         my_predicted_angle = predicted_angles[bin_id]
         other_bin_ids = list(range(NUM_OF_VOTING_BINS))
         other_bin_ids.remove(bin_id)
-        deltas = [abs(my_predicted_angle - predicted_angles[other_bin_id]) for other_bin_id in other_bin_ids]
+        deltas = [
+            abs(my_predicted_angle - predicted_angles[other_bin_id])
+            for other_bin_id in other_bin_ids
+        ]
         delta_threshold = max(deltas) - min(deltas)
-        condition_above_thresholds_from_other_bins = [delta > delta_threshold for delta in deltas]
-        if (sum(condition_above_thresholds_from_other_bins) >= NUM_OF_VOTING_BINS-1
-            and delta_threshold < VOTING_BIN_THRESHOLD):
+        condition_above_thresholds_from_other_bins = [
+            delta > delta_threshold for delta in deltas
+        ]
+        if (
+            sum(condition_above_thresholds_from_other_bins) >= NUM_OF_VOTING_BINS - 1
+            and delta_threshold < VOTING_BIN_THRESHOLD
+        ):
             bad_bin_ids.append(bin_id)
     good_predicted_angles = np.delete(predicted_angles, bad_bin_ids)
 
@@ -324,10 +361,13 @@ def voting_bin_to_radians(orientation):
     mean_angle = np.average(good_predicted_angles)
     return mean_angle
 
+
 # multi affinity bin
 NUM_OF_MULTI_AFFINITY_BIN = 2
 SHAPE_MULTI_AFFINITY_BIN = (NUM_OF_MULTI_AFFINITY_BIN, 3)
 MULTI_AFFINITY_BIN_WIDTH = TAU / NUM_OF_MULTI_AFFINITY_BIN
+
+
 def radians_to_multi_affinity_bin(angle_rad):
     # convert all angles regardless of sign to the range [0-tau)
     new_angle_rad = angle_rad % TAU
@@ -343,16 +383,17 @@ def radians_to_multi_affinity_bin(angle_rad):
         # calculate bin affinity with cos and sin
         orientation[bin_id][:2] = radians_to_single_bin(angle_bin_start_offset)
         # get the confidence
-        orientation[bin_id][2] = np.asarray([1.]) / NUM_OF_MULTI_AFFINITY_BIN
+        orientation[bin_id][2] = np.asarray([1.0]) / NUM_OF_MULTI_AFFINITY_BIN
 
     # print(f'return shape:\n {orientation[:,:2].shape}\n{orientation[:,2, np.newaxis].shape}')
     return orientation[:, :2], orientation[:, 2, np.newaxis]
 
+
 def multi_affinity_to_radians(orientation):
 
     # get the angles and get confidence
-    predicted_angles_without_offset = orientation[:,:2]
-    predicted_confs = orientation[:,2]
+    predicted_angles_without_offset = orientation[:, :2]
+    predicted_confs = orientation[:, 2]
 
     # offset each predicted angle by bin center
     predicted_angles = np.empty(predicted_angles_without_offset.shape)
@@ -365,19 +406,21 @@ def multi_affinity_to_radians(orientation):
         predicted_angles[bin_id] = predicted_angles_without_offset[bin_id] + BIN_CENTER_COORD
 
     # compute the weighted average sin and cos
-    cos_angles, sin_angles = predicted_angles[:,0], predicted_angles[:,1]
+    cos_angles, sin_angles = predicted_angles[:, 0], predicted_angles[:, 1]
     weighted_cos = np.average(cos_angles, weights=predicted_confs)
     weighted_sin = np.average(sin_angles, weights=predicted_confs)
     # scale values between -1 and 1 for acos.
-    scale_factor = np.max(np.concatenate([cos_angles,sin_angles]))
-    weighted_cos, weighted_sin = weighted_cos/scale_factor, weighted_sin/scale_factor
+    scale_factor = np.max(np.concatenate([cos_angles, sin_angles]))
+    weighted_cos, weighted_sin = weighted_cos / scale_factor, weighted_sin / scale_factor
     # get predicted_angle
     predicted_angle = np.arctan2(weighted_sin, weighted_cos)
-    
+
     return predicted_angle
+
 
 def batch_multi_affinity_to_radians(batch):
     return tf.map_fn(multi_affinity_to_radians, batch)
+
 
 def batch_radians_to_multi_affinity_bin(batch):
     return tf.map_fn(radians_to_multi_affinity_bin, batch)
