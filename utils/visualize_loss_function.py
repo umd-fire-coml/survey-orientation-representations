@@ -15,20 +15,20 @@ import pandas as pd
 
 def generate_loss_csv(batch_size, ground_truth, visualize=False):
     y_true = np.full(batch_size, ground_truth)
-    y_pred = np.linspace(-2 * math.pi, 2 * math.pi, batch_size)
+    y_pred = np.linspace(-math.pi, math.pi, batch_size)
     output_batch = np.zeros((7, batch_size))
     # ===== multibin =====
-    multibin_scaling_factor = 0.5
-    # multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_true], dtype=tf.float32)
-    # multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_pred], dtype=tf.float32)
-    multibin_true = tf.convert_to_tensor(
-        [np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_true],
-        dtype=tf.float32,
-    )
-    multibin_pred = tf.convert_to_tensor(
-        [np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_pred],
-        dtype=tf.float32,
-    )
+    multibin_scaling_factor = 1.5
+    multibin_true = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_true], dtype=tf.float32)
+    multibin_pred = tf.convert_to_tensor([np.concatenate(radians_to_multibin(angle), axis=-1) for angle in y_pred], dtype=tf.float32)
+    # multibin_true = tf.convert_to_tensor(
+    #     [np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_true],
+    #     dtype=tf.float32,
+    # )
+    # multibin_pred = tf.convert_to_tensor(
+    #     [np.concatenate(radians_to_multi_affinity_bin(angle), axis=-1) for angle in y_pred],
+    #     dtype=tf.float32,
+    # )
     multibin_losses = multibin_scaling_factor * loss_function.loss_multi_affinity__(
         multibin_true, multibin_pred
     )
@@ -66,10 +66,11 @@ def generate_loss_csv(batch_size, ground_truth, visualize=False):
     angular_loss_scaling_factor = 1
     roty_true = tf.convert_to_tensor([angle for angle in y_true], dtype=tf.float32)
     roty_pred = tf.convert_to_tensor([angle for angle in y_pred], dtype=tf.float32)
-    angular_losses = angular_loss_scaling_factor * loss_function.loss_alpha_rot_y_angular_(
+    angular_losses = loss_function.loss_alpha_rot_y_angular_(
         roty_true, roty_pred
     )
-    rot_y_scaling_factor = 1 / 20
+
+    rot_y_scaling_factor = 1 #1 / 20
     output_batch[4, :] = angular_losses
     roty_losses = loss_function.loss_alpha_rot_y_l2_(
         roty_true[:, np.newaxis], roty_pred[:, np.newaxis]
@@ -82,9 +83,28 @@ def generate_loss_csv(batch_size, ground_truth, visualize=False):
     l2_loss = l2_scaling_factor * loss_function.l2_loss(l2_true, l2_pred)
     output_batch[6, :] = l2_loss
     if visualize:
+        # plt multibin
         plt.figure()
         plt.plot(y_pred, multibin_losses)
-        plt.savefig(f"gt_{str(np.round(ground_truth,3))}_loss_func.png")
+        plt.title('Multibin Loss Function When GT=0')
+        plt.xlabel('Predicted Value')
+        plt.ylabel('Loss')
+        plt.savefig(f"multibin_gt_{str(np.round(ground_truth,3))}.png")
+        # plot l2
+        plt.figure()
+        plt.plot(y_pred, tricosine_losses)
+        plt.title('L2 Loss Function When GT=0')
+        plt.xlabel('Predicted Value')
+        plt.ylabel('Loss')
+        plt.savefig(f"l2_gt_{str(np.round(ground_truth,3))}.png")
+
+        # plot angular_losses
+        plt.figure()
+        plt.plot(y_pred, angular_losses)
+        plt.title('Angular Loss Function When GT=0')
+        plt.xlabel('Predicted Value')
+        plt.ylabel('Loss')
+        plt.savefig(f"Angular_gt_{str(np.round(ground_truth,3))}.png")
 
     return output_batch.T, y_pred
 
@@ -95,7 +115,7 @@ if __name__ == "__main__":
     df_list = []
     for gt in [0, 0.5 * math.pi, math.pi]:
         loss_array, y_pred = generate_loss_csv(BATCH_SIZE, gt, True)
-        output_dir = pathlib.Path("../loss_function_graph")
+        output_dir = pathlib.Path("loss_function_graph")
         df = pd.DataFrame(
             data=loss_array,
             index=np.array(y_pred),
@@ -111,4 +131,4 @@ if __name__ == "__main__":
         )
         df_list.append(df)
     all_df = pd.concat(df_list, 1)
-    # all_df.to_csv(output_dir/"loss_function.csv")
+    all_df.to_csv(output_dir/"loss_function.csv")

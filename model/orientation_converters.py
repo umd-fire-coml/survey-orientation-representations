@@ -382,7 +382,7 @@ def radians_to_multi_affinity_bin(angle_rad):
         angle_bin_start_offset = new_angle_rad - BIN_CENTER
         # calculate bin affinity with cos and sin
         orientation[bin_id][:2] = radians_to_single_bin(angle_bin_start_offset)
-        # get the confidence
+        # get the confidence (equal distribution)
         orientation[bin_id][2] = np.asarray([1.0]) / NUM_OF_MULTI_AFFINITY_BIN
 
     # print(f'return shape:\n {orientation[:,:2].shape}\n{orientation[:,2, np.newaxis].shape}')
