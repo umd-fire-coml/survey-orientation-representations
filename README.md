@@ -1,9 +1,9 @@
-# A Survey of Orientation Representations for Accurate Deep Rotation Estimation 
+# SoK: Vehicle Orientation Representations for Deep Rotation Estimation 
 ## Raymond H. Tu, Siyuan Peng, Valdimir Leung, Richard Gao, Jerry Lan
 This is the official implementation for the paper [SoK: Vehicle Orientation Representations for Deep Rotation Estimation](www.google.com)
-![Orienation Diagram](./img_src/orientation_diagram.jpg "A Diagram for Orientation Representation")
+<img src="./img_src/orientation_diagram.jpg" style="height:150px;">
 
-![Model Diagram](./img_src/model_diagram.jpg "A Diagram for Model")
+![Model Diagram](./img_src/model_diagram.jpg )
 
 ## Table of Conents
 - [Environment Setup](#Envrionment-Setup)
