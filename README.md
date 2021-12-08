@@ -1,6 +1,9 @@
 # A Survey of Orientation Representations for Accurate Deep Rotation Estimation 
 ## Raymond H. Tu, Siyuan Peng, Valdimir Leung, Richard Gao, Jerry Lan
-This is the official implementation for the paper [A survey of Orientation Representations for Accuracte Deep Rotation](www.google.com)
+This is the official implementation for the paper [SoK: Vehicle Orientation Representations for Deep Rotation Estimation](www.google.com)
+![Orienation Diagram](./img_src/orientation_diagram.jpg "A Diagram for Orientation Representation")
+
+![Model Diagram](./img_src/model_diagram.jpg "A Diagram for Model")
 
 ## Table of Conents
 - [Environment Setup](#Envrionment-Setup)
@@ -50,6 +53,6 @@ python3 model/training.py -h
 | E8     | Tricosine               | L2 Loss        | -                 | 94.249         |
 | E9     | Tricosine               | L2 Loss        | Pos Enc           | 94.351         |
 | E10    | Tricosine               | L2 Loss        | Dep Map           | 94.384         |
-| E11    | Confidence Bins (2-Bin) | L2(Bins,Confs) | -                 | 83.304         |
-| E12    | Confidence Bins (4-Bin) | L2(Bins,Confs) | -                 | 88.071         |
+| E11    | 2 Conf Bins             | L2(Bins,Confs) | -                 | 83.304         |
+| E12    | 4 Conf Bins             | L2(Bins,Confs) | -                 | 88.071         |
 
