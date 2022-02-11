@@ -1,15 +1,19 @@
 from logging import log
+from numpy import dtype
 from numpy.core.fromnumeric import sort
 import tensorflow as tf
 from build_model import build_model
 from loss_function import get_loss_params
 from metrics import OrientationAccuracy
-import data_processing as dp
+# import data_processing as dp
+import data_generator as dp
 import os, re, argparse, time, glob
 from datetime import datetime
 import pathlib
 import tensorflow as tf
-
+from tensorflow.python.keras.utils.data_utils import Sequence
+from tensorflow.data import AUTOTUNE
+import orientation_converters
 # set up tensorflow GPU
 tf.config.list_physical_devices('GPU')
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -205,33 +209,52 @@ if __name__ == "__main__":
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
 
     # Generator config
-    train_gen = dp.KittiGenerator(
-        label_dir=LABEL_DIR,
-        image_dir=IMG_DIR,
-        batch_size=BATCH_SIZE,
-        orientation_type=ORIENTATION,
-        mode='train',
-        val_split=VAL_SPLIT,
-        prediction_target=PREDICTION_TARGET,
-        add_pos_enc=ADD_POS_ENC,
-        add_depth_map=ADD_DEPTH_MAP,
+    # train_gen = dp.KittiGenerator(
+    #     label_dir=LABEL_DIR,
+    #     image_dir=IMG_DIR,
+    #     batch_size=BATCH_SIZE,
+    #     orientation_type=ORIENTATION,
+    #     mode='train',
+    #     val_split=VAL_SPLIT,
+    #     prediction_target=PREDICTION_TARGET,
+    #     add_pos_enc=ADD_POS_ENC,
+    #     add_depth_map=ADD_DEPTH_MAP,
+    # )
+    # val_gen = dp.KittiGenerator(
+    #     label_dir=LABEL_DIR,
+    #     image_dir=IMG_DIR,
+    #     batch_size=BATCH_SIZE,
+    #     orientation_type=ORIENTATION,
+    #     mode='val',
+    #     val_split=VAL_SPLIT,
+    #     all_objs=train_gen.all_objs,
+    #     prediction_target=PREDICTION_TARGET,
+    #     add_pos_enc=ADD_POS_ENC,
+    #     add_depth_map=ADD_DEPTH_MAP,
+    # )
+
+    train_dataset = tf.data.Dataset.from_generator(
+        dp.KittiGenerator,
+        output_signature=(
+            tf.TensorSpec(shape=(224,224,3), dtype=tf.float32), # image 
+            tf.TensorSpec(shape=(2,3), dtype=tf.float32)  # label
+            ),
+        args=(
+             LABEL_DIR,  # label dir
+             IMG_DIR,    # image dir
+             "train",    # mode
+             False,      # get kitti line
+             ORIENTATION,# orientation type
+             VAL_SPLIT,  # validation split
+             PREDICTION_TARGET,  # prediction target
+             0,       # all obj
+             False,      # add positional encoding
+             False,      # add depth map
+         )
     )
-    val_gen = dp.KittiGenerator(
-        label_dir=LABEL_DIR,
-        image_dir=IMG_DIR,
-        batch_size=BATCH_SIZE,
-        orientation_type=ORIENTATION,
-        mode='val',
-        val_split=VAL_SPLIT,
-        all_objs=train_gen.all_objs,
-        prediction_target=PREDICTION_TARGET,
-        add_pos_enc=ADD_POS_ENC,
-        add_depth_map=ADD_DEPTH_MAP,
-    )
-    print(
-        'Training on {:n} objects. Validating on {:n} objects.'.format(
-            len(train_gen.obj_ids), len(val_gen.obj_ids)
-        )
+    train_dataset = (train_dataset
+        .prefetch(AUTOTUNE)
+        .batch(NUM_EPOCH)
     )
 
     # Building Model
@@ -298,10 +321,10 @@ if __name__ == "__main__":
         )
 
     train_history = model.fit(
-        x=train_gen,
+        x=train_dataset,
         epochs=NUM_EPOCH,
         verbose=1,
-        validation_data=val_gen,
+        validation_data=train_dataset, # need to change to validation dataset later
         callbacks=[tb_callback, cp_callback],
         initial_epoch=init_epoch,
     )
