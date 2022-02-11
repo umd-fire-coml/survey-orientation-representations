@@ -10,6 +10,7 @@ from add_output_layers import (
     LAYER_OUTPUT_NAME_ALPHA_ROT_Y,
     LAYER_OUTPUT_NAME_MULTIBIN,
     LAYER_OUTPUT_NAME_VOTING_BIN,
+    LAYER_OUTPUT_NAME_EXP_A
 )
 from tensorflow.keras.losses import mean_squared_error as l2_loss
 import numpy as np
@@ -98,6 +99,12 @@ def loss_voting_bin_(y_true, y_pred):
 loss_voting_bin = {LAYER_OUTPUT_NAME_VOTING_BIN: loss_voting_bin_}
 loss_voting_bin_weights = {LAYER_OUTPUT_NAME_VOTING_BIN: 1.0}
 
+def loss_exp_A_(y_true, y_pred):
+    return l2_loss(y_true, y_pred)
+
+loss_exp_A = {LAYER_OUTPUT_NAME_EXP_A: loss_exp_A_}
+loss_exp_A_weights = {LAYER_OUTPUT_NAME_EXP_A: 1.0}
+
 
 def get_loss_params(orientation, use_angular_loss):
     if orientation == 'tricosine':
@@ -110,6 +117,8 @@ def get_loss_params(orientation, use_angular_loss):
         return loss_voting_bin, loss_voting_bin_weights
     elif orientation == 'single-bin':
         return loss_single_bin, loss_single_bin_weights
+    elif orientation == 'exp-A':
+        return loss_exp_A, loss_exp_A_weights
     elif use_angular_loss:
         return loss_alpha_rot_y_angular, loss_alpha_rot_y_angular_weights
     else:

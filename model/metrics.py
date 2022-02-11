@@ -38,6 +38,7 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
         # recursively unpacks tensor until the tensor dimension is same shape as orientation_converters
         tensor_shape = tensor.get_shape()
         arr = tensor.numpy()
+        output_shape = get_output_shape_dict()[str(self.orientation_type)]
         if self.orientation_type == 'tricosine':
             if tensor_shape == SHAPE_TRICOSINE:
                 alpha = tricosine_to_radians(arr)
@@ -72,6 +73,17 @@ class OrientationAccuracy(tf.keras.metrics.Metric):
                 alpha = single_bin_to_radians(arr)
                 return tf.constant(alpha, dtype=TF_TYPE)
             elif len(tensor_shape) > len(SHAPE_SINGLE_BIN):
+                return tf.stack(
+                    [
+                        self.recursively_convert_to_radians(un_packed_tensor)
+                        for un_packed_tensor in tf.unstack(tensor)
+                    ]
+                )
+        elif self.orientation_type == 'exp-A':
+            if tensor_shape == output_shape:
+                alpha = expA_to_radians(arr)
+                return tf.constant(alpha, dtype=TF_TYPE)
+            elif len(tensor_shape) > len(output_shape):
                 return tf.stack(
                     [
                         self.recursively_convert_to_radians(un_packed_tensor)

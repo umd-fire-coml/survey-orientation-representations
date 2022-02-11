@@ -8,6 +8,7 @@ from orientation_converters import (
     SHAPE_ALPHA_ROT_Y,
     SHAPE_VOTING_BIN,
     SHAPE_MULTI_AFFINITY_BIN,
+    SHAPE_EXP_A
 )
 
 LAYER_OUTPUT_NAME_TRICOSINE = 'tricosine_layer_output'
@@ -15,6 +16,7 @@ LAYER_OUTPUT_NAME_ALPHA_ROT_Y = 'alpha_rot_y_layer_output'
 LAYER_OUTPUT_NAME_MULTIBIN = 'multibin_layer_output'
 LAYER_OUTPUT_NAME_VOTING_BIN = 'voting_bin_layer_output'
 LAYER_OUTPUT_NAME_SINGLE_BIN = 'single_bin_layer_output'
+LAYER_OUTPUT_NAME_EXP_A = 'exp_A_layer_output'
 
 
 def add_dense_layers(backbone_layer, output_shape, out_layer_name=''):
@@ -48,6 +50,10 @@ def add_output_layers(orientation_type, backbone_layer):
     if orientation_type == 'single-bin':
         return add_dense_layers(
             backbone_layer, SHAPE_SINGLE_BIN, out_layer_name=LAYER_OUTPUT_NAME_SINGLE_BIN
+        )
+    if orientation_type == 'exp-A':
+        return add_dense_layers(
+            backbone_layer, SHAPE_EXP_A, out_layer_name=LAYER_OUTPUT_NAME_EXP_A
         )
     else:
         raise NameError("Invalid orientation_output_type")

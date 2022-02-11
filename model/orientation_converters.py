@@ -1,4 +1,5 @@
 from math import tau
+from matplotlib.pyplot import axis
 import numpy as np
 import tensorflow as tf
 import math
@@ -424,3 +425,59 @@ def batch_multi_affinity_to_radians(batch):
 
 def batch_radians_to_multi_affinity_bin(batch):
     return tf.map_fn(radians_to_multi_affinity_bin, batch)
+
+'''
+------------ Start of Experiement ------------
+'''
+
+# Experiment A:2-bins, with (cos, sin) pair encoding, with simple average, global angle
+EXP_A_NUM_BIN = 2
+SHAPE_EXP_A = (EXP_A_NUM_BIN, 2)
+EXP_A_BIN_WIDTH = TAU / EXP_A_NUM_BIN
+
+# Following Voting Bin
+def radians_to_expA(angle_rad):
+    # convert all angles regardless of sign to the range [0-tau)
+    new_angle_rad = angle_rad % TAU
+    # placeholder for all output values
+    orientation = np.zeros(shape=SHAPE_EXP_A)
+
+    for bin_id in range(EXP_A_NUM_BIN):
+        # BIN START
+        BIN_START = bin_id * EXP_A_BIN_WIDTH
+        BIN_CENTER = BIN_START + (EXP_A_BIN_WIDTH / 2)
+        angle_bin_start_offset = new_angle_rad - BIN_CENTER
+        # calculate bin affinity with cos and sin
+        orientation[bin_id] = radians_to_single_bin(angle_bin_start_offset)
+    
+    return orientation
+
+def expA_to_radians(orientation):
+    # clip values between -1 and 1 for acos.
+    orientation = np.clip(orientation, -1.0, 1.0)
+
+    # placeholder for the list of all predictions
+    predicted_angles = np.empty(shape=(EXP_A_NUM_BIN,))
+
+    # get the weighted average of all predictions
+    for bin_id in range(EXP_A_NUM_BIN):
+        # get the angle
+        angle_bin_center_offset = single_bin_to_radians(orientation[bin_id])
+        BIN_START = bin_id * BIN_SIZE
+        BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
+        predicted_angle = angle_bin_center_offset
+        predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
+    # get the average of cos and sin across two bins
+    mean_angle = np.average(predicted_angles, axis = 0) 
+    return mean_angle
+
+def get_output_shape_dict():
+    return {
+        "rot-y": SHAPE_ALPHA_ROT_Y,
+        "alpha": SHAPE_ALPHA_ROT_Y,
+        "multibin":SHAPE_MULTI_AFFINITY_BIN,
+        'voting-bin':SHAPE_VOTING_BIN,
+        'single-bin': SHAPE_SINGLE_BIN,
+        'tricosine' : SHAPE_TRICOSINE,
+        'exp-A':SHAPE_EXP_A
+    }

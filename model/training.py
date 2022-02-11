@@ -14,6 +14,8 @@ import tensorflow as tf
 from tensorflow.python.keras.utils.data_utils import Sequence
 from tensorflow.data import AUTOTUNE
 import orientation_converters
+from orientation_converters import get_output_shape_dict as output_shape
+
 # set up tensorflow GPU
 tf.config.list_physical_devices('GPU')
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -156,6 +158,7 @@ if __name__ == "__main__":
     LABEL_DIR = os.path.join(KITTI_DIR, 'training/label_2/')
     IMG_DIR = os.path.join(KITTI_DIR, 'training/image_2/')
 
+
     if not os.path.isdir(KITTI_DIR):
         raise Exception('kitti_dir is not a directory.')
     if ORIENTATION not in [
@@ -165,6 +168,7 @@ if __name__ == "__main__":
         'multibin',
         'voting-bin',
         'single-bin',
+        'exp-A'
     ]:
         raise Exception('Invalid Orientation Type.')
     if not 0.0 <= VAL_SPLIT <= 1.0:
@@ -237,7 +241,7 @@ if __name__ == "__main__":
         dp.KittiGenerator,
         output_signature=(
             tf.TensorSpec(shape=(224,224,3), dtype=tf.float32), # image 
-            tf.TensorSpec(shape=(2,3), dtype=tf.float32)  # label
+            tf.TensorSpec(shape=output_shape()[str(ORIENTATION)], dtype=tf.float32)  # label
             ),
         args=(
              LABEL_DIR,  # label dir
@@ -247,10 +251,30 @@ if __name__ == "__main__":
              ORIENTATION,# orientation type
              VAL_SPLIT,  # validation split
              PREDICTION_TARGET,  # prediction target
-             0,       # all obj
+             0,          # all obj
              False,      # add positional encoding
              False,      # add depth map
          )
+    )
+
+    val_dataset = tf.data.Dataset.from_generator(
+        dp.KittiGenerator,
+        output_signature=(
+            tf.TensorSpec(shape=(224,224,3), dtype=tf.float32), # image 
+            tf.TensorSpec(shape=output_shape()[str(ORIENTATION)], dtype=tf.float32)  # label
+            ),
+        args=(
+                LABEL_DIR,  # label dir
+                IMG_DIR,    # image dir
+                "val",      # mode
+                False,      # get kitti line
+                ORIENTATION,# orientation type
+                VAL_SPLIT,  # validation split
+                PREDICTION_TARGET,  # prediction target
+                0,       # all obj   #TODO: need to fix this to not load everything twice
+                False,      # add positional encoding
+                False,      # add depth map
+            )
     )
     train_dataset = (train_dataset
         .prefetch(AUTOTUNE)
