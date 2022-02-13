@@ -2,11 +2,10 @@
 import os
 import math
 import numpy as np
-import copy
 import pathlib
 from skimage import io
 from skimage.transform import resize
-import skimage
+import pickle
 from skimage.util import img_as_float
 from skimage.transform import resize
 from os.path import join
@@ -306,6 +305,7 @@ class KittiGenerator(Sequence):
 
     def __init__(
         self,
+        # when using tf.data.dataset.from_generator, it convert all str argument to binary
         label_dir: bytes = b'dataset/training/label_2/',
         image_dir: bytes = b'dataset/training/image_2/',
         mode: str = "train",
@@ -313,25 +313,33 @@ class KittiGenerator(Sequence):
         orientation_type: str = "multibin",
         val_split: float = 0.0,
         prediction_target: str = 'rot-y',
-        all_objs=0,
         add_pos_enc: bool = False,
         add_depth_map: bool = False,
     ):
-        if all_objs == 0:
-            self.all_objs = get_all_objs_from_kitti_dir(label_dir.decode(), image_dir.decode())
-        else:
-            self.all_objs = all_objs
         self.label_dir = label_dir.decode() if isinstance(label_dir,bytes) else label_dir
         self.image_dir = image_dir.decode() if isinstance(image_dir,bytes) else image_dir
         self.get_kitti_line = get_kitti_line
         self.mode = mode.decode() if isinstance(mode,bytes) else mode
         self.orientation_type = orientation_type.decode() if isinstance(orientation_type,bytes) else orientation_type
         self.prediction_target = prediction_target.decode() if isinstance(prediction_target,bytes) else prediction_target
+        self.add_pos_enc = add_pos_enc
+        self.add_depth_map = add_depth_map
+
+        # save loaded data
+        pkl_file = pathlib.Path(f"tmp_data.pkl")
+        if pkl_file.is_file():
+            with open(pkl_file,'rb') as handle:
+                self.all_objs = pickle.load(handle)
+        else:
+            self.all_objs = get_all_objs_from_kitti_dir(label_dir.decode(), image_dir.decode())
+            print(f'pickle file {pkl_file} not found, saving it locally')
+            with open(pkl_file,'wb') as handle:
+                pickle.dump(self.all_objs, handle)
+
+        
         self.obj_ids = list(
             range(len(self.all_objs))
         )  # list of all object indexes for the generator
-        self.add_pos_enc = add_pos_enc
-        self.add_depth_map = add_depth_map
 
         if val_split > 0.0:
             assert mode != 'all' and val_split < 1.0
@@ -342,7 +350,6 @@ class KittiGenerator(Sequence):
                 self.obj_ids = self.obj_ids[:cutoff]  # reduce range for testing
             else:
                 raise Exception(f"invalid mode: {self.mode}")
-        self.on_epoch_end()
 
     def __len__(self):
         return len(self.obj_ids)
@@ -401,7 +408,6 @@ class KittiGenerator(Sequence):
         # else:
         #     raise Exception("Invalid Orientation Type")
         label = orientation
-
         if self.get_kitti_line:
             label['line_batch'] = line_batch
         return img, label

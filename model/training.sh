@@ -2,6 +2,7 @@
 python3 training.py \
     --predict rot-y \
     --converter exp-A \
-    --epoch 1 \
+    --epoch 100 \
+    --batch_size 36 \
     --kitti_dir "/home/siyuan/dataset/kitti" \
-    --training_record "/home/siyuan/fire/kitti_orientation/weights/testing"
+    --training_record "/home/siyuan/fire/kitti_orientation/weights/experiments" \

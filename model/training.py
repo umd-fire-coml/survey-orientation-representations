@@ -16,6 +16,8 @@ from tensorflow.data import AUTOTUNE
 import orientation_converters
 from orientation_converters import get_output_shape_dict as output_shape
 
+DATASET_TOTAL_OBJECTS = 26937
+
 # set up tensorflow GPU
 tf.config.list_physical_devices('GPU')
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -197,6 +199,7 @@ if __name__ == "__main__":
     weights_directory.mkdir(parents=True, exist_ok=True)
     logs_directory.mkdir(parents=True, exist_ok=True)
     init_epoch = 0
+    
     if not RESUME:
         log_dir = logs_directory / training_stamp
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -212,31 +215,6 @@ if __name__ == "__main__":
         tb_log_dir = log_dir / "logs/scalars/"
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
 
-    # Generator config
-    # train_gen = dp.KittiGenerator(
-    #     label_dir=LABEL_DIR,
-    #     image_dir=IMG_DIR,
-    #     batch_size=BATCH_SIZE,
-    #     orientation_type=ORIENTATION,
-    #     mode='train',
-    #     val_split=VAL_SPLIT,
-    #     prediction_target=PREDICTION_TARGET,
-    #     add_pos_enc=ADD_POS_ENC,
-    #     add_depth_map=ADD_DEPTH_MAP,
-    # )
-    # val_gen = dp.KittiGenerator(
-    #     label_dir=LABEL_DIR,
-    #     image_dir=IMG_DIR,
-    #     batch_size=BATCH_SIZE,
-    #     orientation_type=ORIENTATION,
-    #     mode='val',
-    #     val_split=VAL_SPLIT,
-    #     all_objs=train_gen.all_objs,
-    #     prediction_target=PREDICTION_TARGET,
-    #     add_pos_enc=ADD_POS_ENC,
-    #     add_depth_map=ADD_DEPTH_MAP,
-    # )
-
     train_dataset = tf.data.Dataset.from_generator(
         dp.KittiGenerator,
         output_signature=(
@@ -251,7 +229,6 @@ if __name__ == "__main__":
              ORIENTATION,# orientation type
              VAL_SPLIT,  # validation split
              PREDICTION_TARGET,  # prediction target
-             0,          # all obj
              False,      # add positional encoding
              False,      # add depth map
          )
@@ -271,15 +248,19 @@ if __name__ == "__main__":
                 ORIENTATION,# orientation type
                 VAL_SPLIT,  # validation split
                 PREDICTION_TARGET,  # prediction target
-                0,       # all obj   #TODO: need to fix this to not load everything twice
                 False,      # add positional encoding
                 False,      # add depth map
             )
     )
     train_dataset = (train_dataset
         .prefetch(AUTOTUNE)
-        .batch(NUM_EPOCH)
+        .batch(BATCH_SIZE)
+        .shuffle(50)
+        .repeat(NUM_EPOCH)
     )
+    val_dataset = (val_dataset
+        .prefetch(AUTOTUNE)
+        .batch(BATCH_SIZE))
 
     # Building Model
     n_channel = 3
@@ -343,14 +324,18 @@ if __name__ == "__main__":
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=cp_callback_file, save_weights_only=True, verbose=1
         )
-
+    train_total_obj = int((1-VAL_SPLIT) * DATASET_TOTAL_OBJECTS)
+    print(f'Total number of objects to train: {train_total_obj} \nStep size: {int(train_total_obj/NUM_EPOCH)}')
     train_history = model.fit(
         x=train_dataset,
         epochs=NUM_EPOCH,
+        steps_per_epoch = int(train_total_obj/NUM_EPOCH),
         verbose=1,
-        validation_data=train_dataset, # need to change to validation dataset later
+        validation_data=val_dataset, # need to change to validation dataset later
         callbacks=[tb_callback, cp_callback],
         initial_epoch=init_epoch,
+        use_multiprocessing = True,
+        workers = 8
     )
 
     print('Training Finished. Weights and history are saved under directory:', WEIGHT_DIR_ROOT)
