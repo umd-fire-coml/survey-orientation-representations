@@ -6,3 +6,4 @@ python3 training.py \
     --batch_size 36 \
     --kitti_dir "/home/siyuan/dataset/kitti" \
     --training_record "/home/siyuan/fire/kitti_orientation/weights/experiments" \
+    --resume True
