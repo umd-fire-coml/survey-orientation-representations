@@ -314,9 +314,9 @@ def radians_to_voting_bin(angle_rad):
         # BIN START
         BIN_START = bin_id * BIN_SIZE
         BIN_CENTER = BIN_START + (VOTING_BIN_WIDTH / 2)
-        angle_bin_start_offset = new_angle_rad - BIN_CENTER
+        angle_bin_center_offset = new_angle_rad - BIN_CENTER
         # calculate bin affinity with cos and sin
-        orientation[bin_id] = radians_to_single_bin(angle_bin_start_offset)
+        orientation[bin_id] = radians_to_single_bin(angle_bin_center_offset)
 
     return orientation
 
@@ -446,9 +446,9 @@ def radians_to_expA(angle_rad):
         # BIN START
         BIN_START = bin_id * EXP_A_BIN_WIDTH
         BIN_CENTER = BIN_START + (EXP_A_BIN_WIDTH / 2)
-        angle_bin_start_offset = new_angle_rad - BIN_CENTER
+        angle_bin_center_offset = new_angle_rad - BIN_CENTER
         # calculate bin affinity with cos and sin
-        orientation[bin_id] = radians_to_single_bin(angle_bin_start_offset)
+        orientation[bin_id] = radians_to_single_bin(angle_bin_center_offset)
     
     return orientation
 
