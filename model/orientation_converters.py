@@ -468,7 +468,7 @@ def expA_to_radians(orientation):
         predicted_angle = angle_bin_center_offset
         predicted_angles[bin_id] = (predicted_angle + BIN_CENTER) % TAU
     # get the average of cos and sin across two bins
-    mean_angle = np.average(predicted_angles, axis = 0) 
+    mean_angle = get_mean_angle(predicted_angles)
     return mean_angle
 
 def get_output_shape_dict():
