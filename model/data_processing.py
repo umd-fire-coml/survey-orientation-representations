@@ -2,27 +2,26 @@
 # import os
 # import math
 # import numpy as np
-# import copy
 # import pathlib
 # from skimage import io
 # from skimage.transform import resize
-# import skimage
 # from skimage.util import img_as_float
 # from skimage.transform import resize
 # from os.path import join
-# from tensorflow.keras.utils import Sequence
 # from tqdm import tqdm
 # from random import random
 # from positional_encoder import get_2d_pos_enc
-# from orientation_converters import (
-#     SHAPE_ALPHA_ROT_Y,
-#     SHAPE_MULTI_AFFINITY_BIN,
-#     SHAPE_SINGLE_BIN,
-#     SHAPE_TRICOSINE,
-#     SHAPE_VOTING_BIN,
-# )
+# # from orientation_converters import (
+# #     SHAPE_ALPHA_ROT_Y,
+# #     SHAPE_MULTI_AFFINITY_BIN,
+# #     SHAPE_SINGLE_BIN,
+# #     SHAPE_TRICOSINE,
+# #     SHAPE_VOTING_BIN,
+# # )
 # from orientation_converters import *
+# from orientation_converters import get_output_shape_dict as output_shape
 # from add_output_layers import *
+# from tensorflow.keras.utils import Sequence
 
 # # constants
 # CROP_RESIZE_H, CROP_RESIZE_W = 224, 224
@@ -230,6 +229,12 @@
 #             if 'rot-y_normed_flipped' not in obj:
 #                 obj['rot-y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot-y'])
 #             return img, obj['rot-y_normed_flipped']
+#         elif orientation_type == 'exp-A':
+#             if 'exp-A_flipped' not in obj:
+#                 obj['exp-A_flipped'] = radians_to_expA(
+#                     math.tau - obj[prediction_target]
+#                 )
+#             return img, obj['exp-A_flipped']
 #         else:
 #             raise Exception(
 #                 f"Invalid orientation_type: {orientation_type}, with prediction_target:"
@@ -268,6 +273,12 @@
 #             if 'rot-y_normed' not in obj:
 #                 obj['rot-y_normed'] = radians_to_angle_normed(obj['rot-y'])
 #             return img, obj['rot-y_normed']
+#         elif orientation_type == 'exp-A':
+#             if 'exp-A' not in obj:
+#                 obj['exp-A'] = radians_to_expA(
+#                     math.tau - obj[prediction_target]
+#                 )
+#             return img, obj['exp-A']
 #         else:
 #             raise Exception(
 #                 f"Invalid orientation_type: {orientation_type}, with prediction_target:"
@@ -292,7 +303,7 @@
 #         image_dir: str = 'dataset/training/image_2/',
 #         mode: str = "train",
 #         get_kitti_line: bool = False,
-#         # batch_size: int = 8,
+#         batch_size: int = 8,
 #         orientation_type: str = "multibin",
 #         val_split: float = 0.0,
 #         prediction_target: str = 'rot-y',
@@ -309,7 +320,7 @@
 #         self.image_dir = image_dir
 #         self.get_kitti_line = get_kitti_line
 #         self.mode = mode
-#         self.batch_size = 1
+#         self.batch_size = batch_size
 #         self.orientation_type = orientation_type
 #         self.prediction_target = prediction_target
 #         self.obj_ids = list(
@@ -330,7 +341,7 @@
 #         self.on_epoch_end()
 
 #     def __len__(self):
-#         return int(len(self.obj_ids) // self.batch_size)
+#         return len(self.obj_ids) // self.batch_size
 
 #     def __getitem__(self, idx):
 #         l_bound = idx * self.batch_size  # start of key index
@@ -361,6 +372,8 @@
 #             orientation_batch = np.empty((num_batch_objs, *SHAPE_VOTING_BIN))
 #         elif self.orientation_type == "single-bin":
 #             orientation_batch = np.empty((num_batch_objs, *SHAPE_SINGLE_BIN))
+#         elif self.orientation_type == "exp-A":
+#             orientation_batch = np.empty((num_batch_objs, *SHAPE_EXP_A))
 #         else:
 #             raise Exception("Invalid Orientation Type")
 
@@ -392,12 +405,13 @@
 #             y_batch = {LAYER_OUTPUT_NAME_VOTING_BIN: orientation_batch}
 #         elif self.orientation_type == "single-bin":
 #             y_batch = {LAYER_OUTPUT_NAME_SINGLE_BIN: orientation_batch}
+#         elif self.orientation_type == "exp-A":
+#             y_batch = {LAYER_OUTPUT_NAME_EXP_A: orientation_batch}
 #         else:
 #             raise Exception("Invalid Orientation Type")
 
 #         if self.get_kitti_line:
 #             y_batch['line_batch'] = line_batch
-#         print(f'-----------!!! img shape: {img_batch.shape}; label shape: {y_batch} !!!----------')
 #         yield  img_batch, y_batch
 
 #     def on_epoch_end(self):
@@ -426,13 +440,6 @@ from tensorflow.keras.utils import Sequence
 from tqdm import tqdm
 from random import random
 from positional_encoder import get_2d_pos_enc
-from orientation_converters import (
-    SHAPE_ALPHA_ROT_Y,
-    SHAPE_MULTI_AFFINITY_BIN,
-    SHAPE_SINGLE_BIN,
-    SHAPE_TRICOSINE,
-    SHAPE_VOTING_BIN,
-)
 from orientation_converters import *
 from add_output_layers import *
 
@@ -642,6 +649,12 @@ def prepare_generator_output(
             if 'rot-y_normed_flipped' not in obj:
                 obj['rot-y_normed_flipped'] = radians_to_angle_normed(math.tau - obj['rot-y'])
             return img, obj['rot-y_normed_flipped']
+        elif orientation_type == 'exp-A':
+            if 'exp-A_flipped' not in obj:
+                obj['exp-A_flipped'] = radians_to_expA(
+                    math.tau - obj[prediction_target]
+                )
+            return img, obj['exp-A_flipped']
         else:
             raise Exception(
                 f"Invalid orientation_type: {orientation_type}, with prediction_target:"
@@ -680,6 +693,12 @@ def prepare_generator_output(
             if 'rot-y_normed' not in obj:
                 obj['rot-y_normed'] = radians_to_angle_normed(obj['rot-y'])
             return img, obj['rot-y_normed']
+        elif orientation_type == 'exp-A':
+            if 'exp-A_normed' not in obj:
+                obj['exp-A_normed'] = radians_to_expA(
+                    math.tau - obj[prediction_target]
+                )
+            return img, obj['exp-A_normed']
         else:
             raise Exception(
                 f"Invalid orientation_type: {orientation_type}, with prediction_target:"
@@ -773,6 +792,8 @@ class KittiGenerator(Sequence):
             orientation_batch = np.empty((num_batch_objs, *SHAPE_VOTING_BIN))
         elif self.orientation_type == "single-bin":
             orientation_batch = np.empty((num_batch_objs, *SHAPE_SINGLE_BIN))
+        elif self.orientation_type == "exp-A":
+            orientation_batch = np.empty((num_batch_objs, *SHAPE_EXP_A))
         else:
             raise Exception("Invalid Orientation Type")
 
@@ -804,11 +825,14 @@ class KittiGenerator(Sequence):
             y_batch = {LAYER_OUTPUT_NAME_VOTING_BIN: orientation_batch}
         elif self.orientation_type == "single-bin":
             y_batch = {LAYER_OUTPUT_NAME_SINGLE_BIN: orientation_batch}
+        elif self.orientation_type == "exp-A":
+            y_batch = {LAYER_OUTPUT_NAME_EXP_A: orientation_batch}
         else:
             raise Exception("Invalid Orientation Type")
 
         if self.get_kitti_line:
             y_batch['line_batch'] = line_batch
+
         return img_batch, y_batch
 
     def on_epoch_end(self):

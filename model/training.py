@@ -5,19 +5,17 @@ import tensorflow as tf
 from build_model import build_model
 from loss_function import get_loss_params
 from metrics import OrientationAccuracy
-import data_generator as dp
+import data_processing as dp
 import os, re, argparse, time, sys
 from datetime import datetime
 import pathlib
 import tensorflow as tf
-from tensorflow.python.keras.utils.data_utils import Sequence
-from tensorflow.data import AUTOTUNE
 import orientation_converters
 from orientation_converters import get_output_shape_dict as output_shape
 sys.path.append('../')
 from utils.train_utils import *
 
-DATASET_TOTAL_OBJECTS = 26937
+
 # setup and config gpu
 setup_gpu()
 # Processing argument
@@ -78,53 +76,30 @@ if __name__ == "__main__":
         tb_log_dir = log_dir / "logs/scalars/"
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1)
 
-    train_dataset = tf.data.Dataset.from_generator(
-        dp.KittiGenerator,
-        output_signature=(
-            tf.TensorSpec(shape=(224,224,3), dtype=tf.float32), # image 
-            tf.TensorSpec(shape=output_shape()[str(ORIENTATION)], dtype=tf.float32)  # label
-            ),
-        args=(
-             LABEL_DIR,  # label dir
-             IMG_DIR,    # image dir
-             "train",    # mode
-             False,      # get kitti line
-             ORIENTATION,# orientation type
-             VAL_SPLIT,  # validation split
-             PREDICTION_TARGET,  # prediction target
-             False,      # add positional encoding
-             False,      # add depth map
-         )
+    # Generator config
+    train_gen = dp.KittiGenerator(
+        label_dir=LABEL_DIR,
+        image_dir=IMG_DIR,
+        batch_size=BATCH_SIZE,
+        orientation_type=ORIENTATION,
+        mode='train',
+        val_split=VAL_SPLIT,
+        prediction_target=PREDICTION_TARGET,
+        add_pos_enc=ADD_POS_ENC,
+        add_depth_map=ADD_DEPTH_MAP,
     )
-
-    val_dataset = tf.data.Dataset.from_generator(
-        dp.KittiGenerator,
-        output_signature=(
-            tf.TensorSpec(shape=(224,224,3), dtype=tf.float32), # image 
-            tf.TensorSpec(shape=output_shape()[str(ORIENTATION)], dtype=tf.float32)  # label
-            ),
-        args=(
-                LABEL_DIR,  # label dir
-                IMG_DIR,    # image dir
-                "val",      # mode
-                False,      # get kitti line
-                ORIENTATION,# orientation type
-                VAL_SPLIT,  # validation split
-                PREDICTION_TARGET,  # prediction target
-                False,      # add positional encoding
-                False,      # add depth map
-            )
+    val_gen = dp.KittiGenerator(
+        label_dir=LABEL_DIR,
+        image_dir=IMG_DIR,
+        batch_size=BATCH_SIZE,
+        orientation_type=ORIENTATION,
+        mode='val',
+        val_split=VAL_SPLIT,
+        all_objs=train_gen.all_objs,
+        prediction_target=PREDICTION_TARGET,
+        add_pos_enc=ADD_POS_ENC,
+        add_depth_map=ADD_DEPTH_MAP,
     )
-    train_dataset = (train_dataset
-        .prefetch(AUTOTUNE)
-        .batch(BATCH_SIZE)
-        .shuffle(50)
-        .repeat(1)
-    )
-    val_dataset = (val_dataset
-        .prefetch(AUTOTUNE)
-        .batch(BATCH_SIZE))
-
     # Building Model
     n_channel = 3
     if ADD_DEPTH_MAP and ADD_DEPTH_MAP:
@@ -144,7 +119,7 @@ if __name__ == "__main__":
         loss_weights=loss_weights,
         optimizer='adam',
         metrics=OrientationAccuracy(ORIENTATION),
-        run_eagerly=True,
+        run_eagerly=True
     )
 
     # early stop callback and accuracy callback
@@ -155,6 +130,8 @@ if __name__ == "__main__":
         init_epoch = int(latest_epoch)
         if not init_epoch:
             raise Exception("Fail to match epoch number")
+        if init_epoch == 1:
+            raise Exception("No existing record found!")
         if not os.path.isfile(latest_weight):
             raise FileNotFoundError(
                 f'stored weights directory "{latest_weight}" is not a valid file'
@@ -173,14 +150,12 @@ if __name__ == "__main__":
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=cp_callback_file, save_weights_only=True, verbose=1
         )
-    train_total_obj = int((1-VAL_SPLIT) * DATASET_TOTAL_OBJECTS)
-    print(f'Total number of objects to train: {train_total_obj} \nStep size: {int(train_total_obj/NUM_EPOCH)}')
+
     train_history = model.fit(
-        x=train_dataset,
+        x=train_gen,
         epochs=NUM_EPOCH,
-        steps_per_epoch = train_total_obj // BATCH_SIZE,
         verbose=1,
-        validation_data=val_dataset, # need to change to validation dataset later
+        validation_data=val_gen, 
         callbacks=[tb_callback, cp_callback],
         initial_epoch=init_epoch,
         use_multiprocessing = True,

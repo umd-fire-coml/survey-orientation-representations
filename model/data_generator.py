@@ -324,8 +324,7 @@ class KittiGenerator(Sequence):
         self.prediction_target = prediction_target.decode() if isinstance(prediction_target,bytes) else prediction_target
         self.add_pos_enc = add_pos_enc
         self.add_depth_map = add_depth_map
-
-        # save loaded data
+        # load all kitti objects and save loaded data
         pkl_file = pathlib.Path(f"tmp_data.pkl")
         if pkl_file.is_file():
             with open(pkl_file,'rb') as handle:
@@ -350,6 +349,7 @@ class KittiGenerator(Sequence):
                 self.obj_ids = self.obj_ids[:cutoff]  # reduce range for testing
             else:
                 raise Exception(f"invalid mode: {self.mode}")
+        
 
     def __len__(self):
         return len(self.obj_ids)
@@ -364,21 +364,6 @@ class KittiGenerator(Sequence):
         elif self.add_depth_map:
             n_channel = 4  # RGB + depth map
 
-        # img_batch = np.empty((CROP_RESIZE_H, CROP_RESIZE_W, n_channel))
-        # # prepare batch of orientation_type tensor
-        # if self.orientation_type == "multibin":
-        #     orientation_batch = np.empty((num_batch_objs, *SHAPE_MULTI_AFFINITY_BIN))
-        # elif self.orientation_type == 'tricosine':
-        #     orientation_batch = np.empty((num_batch_objs, *SHAPE_TRICOSINE))
-        # elif self.orientation_type == "alpha" or self.orientation_type == 'rot-y':
-        #     orientation_batch = np.empty((num_batch_objs, *SHAPE_ALPHA_ROT_Y))
-        # elif self.orientation_type == "voting-bin":
-        #     orientation_batch = np.empty((num_batch_objs, *SHAPE_VOTING_BIN))
-        # elif self.orientation_type == "single-bin":
-        #     orientation_batch = np.empty((num_batch_objs, *SHAPE_SINGLE_BIN))
-        # else:
-        #     raise Exception(f"Invalid Orientation Type: {self.orientation_type}")
-
         # prepare kitti line output for visualization
         line_batch = []
         # insert data
@@ -392,21 +377,6 @@ class KittiGenerator(Sequence):
         )
         if self.get_kitti_line:
             line_batch.append(self.all_objs[idx]['line'])
-
-        # if self.orientation_type == "multibin":
-        #     label = orientation # (2,3)
-        # elif self.orientation_type == 'tricosine':
-        #     label = {LAYER_OUTPUT_NAME_TRICOSINE: orientation}
-        # elif self.orientation_type == "alpha" or self.orientation_type == 'rot-y':
-        #     label = {LAYER_OUTPUT_NAME_ALPHA_ROT_Y: orientation}
-        # elif self.orientation_type == "voting-bin":
-        #     label = {LAYER_OUTPUT_NAME_VOTING_BIN: orientation}
-        # elif self.orientation_type == "single-bin":
-        #     label = {LAYER_OUTPUT_NAME_SINGLE_BIN: orientation}
-        # elif self.orientation_type == "exp-A":
-        #     label = orientation
-        # else:
-        #     raise Exception("Invalid Orientation Type")
         label = orientation
         if self.get_kitti_line:
             label['line_batch'] = line_batch
