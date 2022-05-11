@@ -5,6 +5,6 @@ python3 training.py \
     --epoch 100 \
     --batch_size 25 \
     --kitti_dir "/home/siyuan/dataset/kitti" \
-    --training_record "/home/siyuan/fire/kitti_orientation/weights/experiment" \
+    --training_record "/home/siyuan/fire/kitti_orientation/weights/experimentC" \
     --resume True
 

@@ -7,23 +7,6 @@
 # `pylint *.py`
 
 
-# linting
-[tool.pylint.format]
-max-line-length = 95 # Also remember to change this in [black]
-
-[tool.pylint.message_control]
-disable = [
-  'bad-continuation',           # C0330, suggested by [black]
-  'bad-whitespace',             # C0326, suggested by [black]
-  'invalid-name',               # Requires snake case of at least 3 characters
-  'missing-class-docstring',
-  'missing-function-docstring',
-  'missing-module-docstring',
-  'too-few-public-methods',
-]
-
-jobs = 4
-
 
 # code formatter
 [tool.black]

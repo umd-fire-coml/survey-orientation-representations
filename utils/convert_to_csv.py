@@ -8,10 +8,10 @@ import tensorboard as tb
 import pathlib
 
 experiment_id = (  # multi 2 bins'Goh3jdHwQpedTjWqAxsgoQ' #multi affinity  # depth+ pos_enc"5Jh1z944SBCGobZLLmQdwg" # depth: "K1NKDNUYTqK9GaGVtWvnCA";'w5mbDYCmS5Oz0gYqbw1qLA' # angular loss : 'n05xObObQU24MjsM7KnRRQ'； "w5mbDYCmS5Oz0gYqbw1qLA" 'zgVmzRRNSa2q2smYZClHjQ';multi four bins iJvlXxzgRFKSZwQT5JefxA;exp-A 1mnIdo5MToy3bLZxfDunDw/
-    '1mnIdo5MToy3bLZxfDunDw'
+    'RTaW72EnQpy00g8LpsXFvA'
 )
 csv_file_dir = 'csv_output'
-csv_file_prefix = 'exp-A'
+csv_file_prefix = 'exp-C'
 
 
 def clean_data(input_df, csv_name):

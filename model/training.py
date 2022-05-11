@@ -13,14 +13,14 @@ import tensorflow as tf
 import orientation_converters
 from orientation_converters import get_output_shape_dict as output_shape
 sys.path.append('../')
-from utils.train_utils import *
+import utils.train_utils as train_utils
 
 
 # setup and config gpu
-setup_gpu()
+train_utils.setup_gpu()
 # Processing argument
 parser = argparse.ArgumentParser(description='Training Model')
-args = setup_cmd_arg(parser)
+args = train_utils.setup_cmd_arg(parser)
 BATCH_SIZE = args.batch_size
 NUM_EPOCH = args.num_epoch
 ORIENTATION = args.orientation
@@ -41,7 +41,7 @@ IMG_DIR = os.path.join(KITTI_DIR, 'training/image_2/')
 
 if __name__ == "__main__":
     # checking if receving valid arguments
-    check_args(args, DEPTH_PATH_DIR,LABEL_DIR, IMG_DIR)
+    train_utils.check_args(args, DEPTH_PATH_DIR,LABEL_DIR, IMG_DIR)
     # get training starting time and construct stamps
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '_' + str(int(start_time))
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     # early_stop_callback = tf.keras.callbacks.EarlyStopping(
     #     monitor='val_loss', patience=20)
     if RESUME:
-        latest_training_dir, latest_epoch, latest_weight = find_latest_epoch_and_weights(weights_directory, verbose = True)
+        latest_training_dir, latest_epoch, latest_weight = train_utils.find_latest_epoch_and_weights(weights_directory, verbose = True)
         init_epoch = int(latest_epoch)
         if not init_epoch:
             raise Exception("Fail to match epoch number")
@@ -163,4 +163,4 @@ if __name__ == "__main__":
     )
 
     print('Training Finished. Weights and history are saved under directory:', WEIGHT_DIR_ROOT)
-    print('Total training time is', timer(start_time, time.time()))
+    print('Total training time is', train_utils.timer(start_time, time.time()))

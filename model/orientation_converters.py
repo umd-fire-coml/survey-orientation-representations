@@ -431,7 +431,7 @@ def batch_radians_to_multi_affinity_bin(batch):
 '''
 
 # Experiment A:2-bins, with (cos, sin) pair encoding, with simple average, global angle
-EXP_A_NUM_BIN = 2
+EXP_A_NUM_BIN = 6
 SHAPE_EXP_A = (EXP_A_NUM_BIN, 2)
 EXP_A_BIN_WIDTH = TAU / EXP_A_NUM_BIN
 

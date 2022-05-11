@@ -695,9 +695,7 @@ def prepare_generator_output(
             return img, obj['rot-y_normed']
         elif orientation_type == 'exp-A':
             if 'exp-A_normed' not in obj:
-                obj['exp-A_normed'] = radians_to_expA(
-                    math.tau - obj[prediction_target]
-                )
+                obj['exp-A_normed'] = radians_to_expA(obj[prediction_target])
             return img, obj['exp-A_normed']
         else:
             raise Exception(
